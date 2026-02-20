@@ -1,13 +1,15 @@
-# Lab 4: Going Online (Networking & Coroutines)
+# Lab 5: Navigation & Detail Screen (Das Finale)
 
-In diesem Lab verabschieden wir uns von den lokalen Dummy-Daten. Wir binden die App an die echte "Rick & Morty"-API an, verarbeiten asynchrone Netzwerkaufrufe mit Coroutines und gehen professionell mit Ladezeiten und Fehlern um.
+In diesem finalen Lab machen wir aus dem einzelnen Bildschirm eine echte, navigierbare App. Wir bauen einen Detail-Screen, der seine eigenen Daten aus dem Internet lädt. Dabei nutzen wir modernste "Type-Safe Navigation" und überlassen dem ViewModel die Aufgabe, sich die übergebenen Argumente selbst zu holen.
+
+*Hinweis: Dies ist die umfangreichste Aufgabe. Sollte die Zeit im Workshop nicht reichen, ist dies die perfekte Übung, um sie zu Hause in Ruhe fertigzustellen!*
 
 **Zielzeit:** ca. 90-120 Minuten
 
 ### 1. Vorbereitung
 Stellen Sie sicher, dass Sie startklar sind:
 * **Option A (Eigener Code):** Bleiben Sie auf Ihrem aktuellen Branch, wenn Sie die vorherige Aufgabe erfolgreich abgeschlossen haben.
-* **Option B (Sicherheitsnetz):** Wechseln Sie auf den Branch `lab-4-networking`, wenn Sie unsere Musterlösung als Startpunkt nutzen möchten (`git checkout lab-4-networking`).
+* **Option B (Sicherheitsnetz):** Wechseln Sie auf den Branch `lab-5-navigation`, wenn Sie unsere Musterlösung als Startpunkt nutzen möchten (`git checkout lab-5-navigation`).
 
 ---
 
@@ -15,89 +17,79 @@ Stellen Sie sicher, dass Sie startklar sind:
 
 ### 2. Die Aufgaben
 
-#### Schritt 1: Die API-Antwort modellieren (DTOs)
-Die Rick & Morty API liefert uns JSON zurück. Wir benötigen Klassen, die exakt dieser JSON-Struktur entsprechen.
-* Erstellen Sie eine neue Datei `CharacterDto.kt` (Data Transfer Object).
-* Erstellen Sie eine `@Serializable` Data Class `CharacterDto` für einen einzelnen Charakter (Wichtige Felder laut API: `id`, `name`, `status`, `image`).
-* Erstellen Sie eine zweite `@Serializable` Data Class `CharacterResponse`, welche die gesamte Antwort abbildet.
-> **Tipp:** Die API liefert ein Objekt mit einer Liste namens `results`, in der die eigentlichen Charaktere liegen. Diese Liste müssen Sie in der `CharacterResponse` abbilden.
-* Fügen Sie in dieser Datei eine Erweiterungsfunktion `fun CharacterDto.toDomain(): Character` hinzu, um das DTO (Netzwerk) später in unser sauberes App-Modell (aus Lab 2) umzuwandeln.
-> **Tipp:** Beachten Sie beim Mapping, dass das API-Feld `image` in unserem Domain-Modell `imageUrl` heißt.
-> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 9.2 - JSON Parsing & Serialization](HANDOUT.md#92-json-parsing--serialization)
+#### Schritt 1: Die Routen definieren (Type-Safety)
+Damit der Compiler unsere Navigation überprüfen kann, definieren wir unsere Ziele als strikte Kotlin-Typen.
+* Erstellen Sie eine neue Datei `Routes.kt`.
+* Erstellen Sie ein Objekt (`object`) für den Listen-Screen (z.B. `ListRoute`).
+* Erstellen Sie eine Datenklasse (`data class`) für den Detail-Screen (z.B. `DetailRoute`). Diese muss die `id` des Charakters (als `Int`) aufnehmen können.
+* Annotieren Sie beide Typen mit `@Serializable`.
+> **Tipp:** Sie benötigen das `kotlinx.serialization` Plugin, das wir bereits für das Networking eingerichtet haben.
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 11.3 - Type-Safe Navigation](HANDOUT.md#113-type-safe-navigation-modern-way)
 
-#### Schritt 2: Der API-Service (Retrofit)
-Wir müssen definieren, wie unsere HTTP-Anfragen aussehen.
-* Erstellen Sie ein Interface `RickAndMortyApi`.
-* Definieren Sie darin eine asynchrone Funktion, um alle Charaktere abzurufen.
-> **Tipp:** Nutzen Sie das Schlüsselwort `suspend`, damit die Funktion später in einer Coroutine ausgeführt werden kann, ohne die UI zu blockieren.
-* Annotieren Sie diese Funktion für einen HTTP-GET-Request auf den Endpunkt `"character"`. Als Rückgabetyp erwarten wir unsere `CharacterResponse`.
-> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 9.1 - Retrofit](HANDOUT.md#91-retrofit-der-typ-sichere-http-client)
+#### Schritt 2: Das Netzwerk-Layer erweitern
+Unser Detail-Screen braucht mehr Daten. Wir müssen einen einzelnen Charakter von der API laden.
+* Öffnen Sie Ihr `RickAndMortyApi` Interface.
+* Fügen Sie eine neue asynchrone Funktion (`suspend`) hinzu, die einen einzelnen `CharacterDto` zurückgibt.
+* Annotieren Sie diese für einen GET-Request auf `"character/{id}"`.
+* Öffnen Sie Ihr `CharacterRepository` und fügen Sie auch hier eine entsprechende `suspend` Funktion hinzu, die die API aufruft und das DTO in Ihr Domain-Modell (`Character`) umwandelt.
+> **Tipp:** Um die ID dynamisch in die URL einzufügen, nutzen Sie die Retrofit-Annotation `@Path("id")` vor dem Parameter Ihrer API-Funktion.
 
-#### Schritt 3: Das Repository
-Das ViewModel soll sich nicht direkt um HTTP-Requests kümmern. Wir bauen einen Vermittler.
-* Erstellen Sie eine Klasse `CharacterRepository`.
-* Übergeben Sie die `RickAndMortyApi` als Parameter im Konstruktor.
-* Schreiben Sie eine asynchrone Funktion `getCharacters()`, welche die API aufruft, die `results` Liste nimmt, jedes DTO in unser Domain-Modell (`Character`) umwandelt und diese finale Liste zurückgibt.
-> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 10 - The Repository Pattern](HANDOUT.md#103-implementierung)
+#### Schritt 3: Das Detail-ViewModel & SavedStateHandle
+Das ViewModel für die Details soll völlig selbstständig arbeiten und sich die ID, die beim Navigieren übergeben wurde, selbst besorgen.
+* Erstellen Sie eine neue Klasse `CharacterDetailViewModel`, die von `ViewModel` erbt.
+* Fügen Sie dem Konstruktor dieses ViewModels das `SavedStateHandle` als Parameter hinzu. (Android übergibt dieses automatisch!).
+* Extrahieren Sie die `DetailRoute` direkt im ViewModel aus dem `SavedStateHandle` und speichern Sie die ID in einer Variable.
+* Legen Sie einen `StateFlow` für den Detail-UI-State an (Nutzen Sie Ihr bestehendes Sealed Interface oder erstellen Sie ein neues, falls Sie spezifische Detail-Fehler anzeigen wollen).
+* Laden Sie im `init`-Block des ViewModels den spezifischen Charakter über das Repository und aktualisieren Sie den State.
+> **Tipp:** Um die typsichere Route auszulesen, rufen Sie `savedStateHandle.toRoute<DetailRoute>()` auf. Android Studio schlägt den Import eventuell nicht vor: fügen Sie `import androidx.navigation.toRoute` manuell hinzu.
 
-#### Schritt 4: UI State definieren (Sealed Interface)
-Wenn wir Daten aus dem Netz laden, brauchen wir mehr als nur eine Liste. Wir müssen wissen, ob wir gerade laden oder ob ein Fehler passiert ist.
-* Erstellen Sie in (oder bei) der ViewModel-Datei ein `sealed interface UiState`.
-* Definieren Sie drei Zustände: `Loading` (Object), `Success` (Data Class mit der Liste der Charaktere) und `Error` (Data Class mit einer Fehlermeldung als String).
-> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 7.2 - Der UI State](HANDOUT.md#72-der-ui-state-warum-eine-eigene-klasse)
+#### Schritt 4: Den Detail-Screen bauen
+Der Screen selbst wird extrem sauber, da er keine IDs mehr entgegennehmen muss.
+* Erstellen Sie eine neue Datei `CharacterDetailScreen.kt` und darin eine `@Composable` Funktion `CharacterDetailScreen`.
+* Die Funktion darf als **einzigen Parameter** das `CharacterDetailViewModel` entgegennehmen (nutzen Sie `= viewModel()` als Standardwert).
+* Konsumieren Sie den State aus dem ViewModel (`collectAsStateWithLifecycle`).
+* Bauen Sie mit einem `when(state)` Konstrukt das UI: Ladering, Fehlermeldung, oder bei Erfolg ein schönes Layout (z.B. großes `AsyncImage`, darunter Name, Status, etc.).
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 7.5 - UI State konsumieren](HANDOUT.md#75-der-kreis-schlie%C3%9Ft-sich-ui-state-konsumieren)
 
-#### Schritt 5: Das ViewModel umbauen
-Jetzt verknüpfen wir die Logik und löschen die Dummy-Daten!
-* Ersetzen Sie den alten `StateFlow` (der nur eine Liste hielt) durch einen, der unseren neuen `UiState` hält. Der Startwert sollte `UiState.Loading` sein.
-* Entfernen Sie die initiale Dummy-Liste.
-* Übergeben Sie das `CharacterRepository` an das ViewModel.
-* Schreiben Sie eine Funktion `loadCharacters()`. Starten Sie darin eine Coroutine (`viewModelScope.launch`).
-* Führen Sie den asynchronen Repository-Aufruf aus. Setzen Sie den State bei Erfolg auf `Success` und fangen Sie Fehler mit einem `try-catch`-Block ab.
-> **Tipp:** Setzen Sie im `catch`-Block den State auf `Error` und übergeben Sie die Fehlermeldung der geworfenen Exception.
-* Rufen Sie `loadCharacters()` im `init`-Block des ViewModels auf, damit die Daten beim Start automatisch geladen werden.
-> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 8.1 - Coroutines](HANDOUT.md#81-coroutines-async-einfach-gemacht)
+#### Schritt 5: Die Liste klickbar machen
+Die `Card` in unserer Liste muss auf Klicks reagieren und diese Information an die Activity weitergeben.
+* Erweitern Sie Ihre `CharacterItem` Funktion um ein neues Event-Lambda: `onItemClick: () -> Unit`.
+* Fügen Sie der `Card` im `CharacterItem` den passenden Modifier hinzu, um sie klickbar zu machen, und rufen Sie dort das Lambda auf.
+* Reichen Sie dieses Event durch `CharacterListContent` und `CharacterListScreen` nach oben durch. Das Lambda im Screen sollte die ID des angeklickten Charakters liefern (`onCharacterClick: (Int) -> Unit`).
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 6.3 - State Hoisting](HANDOUT.md#63-state-hoisting-teile-und-herrsche)
 
-#### Schritt 6: State Hoisting im Screen
-Damit wir das UI gut testen und anzeigen können, trennen wir den Screen in einen "smarten" und einen "dummen" Teil auf.
-* Benennen Sie Ihre bisherige Composable `CharacterListScreen` um in `CharacterListContent`.
-* Passen Sie die Parameter von `CharacterListContent` an: Es darf kein ViewModel mehr kennen! Es soll stattdessen den `state: UiState` und das Event `onFavoriteClick: (Int) -> Unit` entgegennehmen.
-* Nutzen Sie innerhalb von `CharacterListContent` ein `when(state)` Konstrukt:
-    * Bei `Loading`: Zeigen Sie einen `CircularProgressIndicator` (zentriert) an.
-    * Bei `Error`: Zeigen Sie einen Text mit der Fehlermeldung an.
-    * Bei `Success`: Zeigen Sie Ihre `LazyColumn` (Ihre bisherige Liste) mit den geladenen Daten an!
-* Erstellen Sie nun eine **neue** Funktion `CharacterListScreen`, welche das ViewModel instanziiert, den State einsammelt (`collectAsStateWithLifecycle`) und an `CharacterListContent` weitergibt.
-> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 6.3 - State Hoisting](HANDOUT.md#63-state-hoisting-teile-und-herrsche) und [📘 Modul 7.5 - UI State konsumieren](HANDOUT.md#75-der-kreis-schlie%C3%9Ft-sich-ui-state-konsumieren)
-
-#### Schritt 7: Previews für alle Zustände
-* Erstellen Sie drei separate `@Preview` Funktionen.
-* Preview 1 (`LoadingPreview`): Rufen Sie `CharacterListContent` auf und übergeben Sie `UiState.Loading`.
-* Preview 2 (`ErrorPreview`): Übergeben Sie `UiState.Error("Keine Internetverbindung")`.
-* Preview 3 (`SuccessPreview`): Übergeben Sie `UiState.Success` und nutzen Sie Ihre `getDummyCharacters()` Funktion, um Beispieldaten in die Preview zu laden.
-> **Tipp:** Da `CharacterListContent` nun "stateless" ist, können wir jeden Zustand perfekt simulieren, ohne das ViewModel oder eine Internetverbindung zu benötigen.
+#### Schritt 6: Den Navigations-Controller aufsetzen (Das Finale)
+Die `MainActivity` orchestriert nun die Screens.
+* Öffnen Sie die `MainActivity.kt` und löschen Sie den direkten Aufruf Ihres `CharacterListScreen`.
+* Erstellen Sie einen `NavController` (`rememberNavController()`) und fügen Sie den `NavHost` ein (Start-Ziel ist `ListRoute`).
+* Definieren Sie im Block des `NavHost` eine `composable<ListRoute>`. Rufen Sie dort den `CharacterListScreen` auf.
+* Nutzen Sie das Lambda `onCharacterClick` des Listen-Screens, um die Navigation auszulösen (`navController.navigate(DetailRoute(id = ...))`).
+* Definieren Sie eine weitere `composable<DetailRoute>`.
+* Da Ihr ViewModel die ID selbst ausliest, müssen Sie hier **nichts weiter tun**, als einfach `CharacterDetailScreen()` aufzurufen!
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 11.2 - Implementation](HANDOUT.md#112-implementation-single-activity)
 
 ---
 
 ### 3. Akzeptanzkriterien (Definition of Done)
-- [ ] Die Dummy-Daten werden im laufenden Betrieb der App nicht mehr genutzt.
-- [ ] Es existieren 3 Previews, die Ladering, Fehlertext und Liste korrekt darstellen.
-- [ ] Wenn die App startet, ist für einen kurzen Moment ein Lade-Kringel (Spinner) zu sehen.
-- [ ] Danach erscheint die Liste mit echten Namen ("Rick Sanchez", "Morty Smith") und Bildern aus dem Netz.
-- [ ] **Der Härtetest:** Schalten Sie den Emulator/Ihr Gerät in den Flugmodus und starten Sie die App neu. Die App zeigt nun anstelle eines Absturzes Ihre modellierte Fehlermeldung auf dem Bildschirm an!
+- [ ] In der `MainActivity` existiert ein `NavHost` mit zwei verknüpften Routen.
+- [ ] Das `CharacterDetailViewModel` holt sich seine ID selbst über das `SavedStateHandle`.
+- [ ] Wenn man in der Liste auf eine Charakter-Karte klickt, öffnet sich ein neuer Screen.
+- [ ] Auf dem neuen Screen erscheint kurz ein Ladering, danach werden die vollen Daten des angeklickten Charakters über das Netzwerk geladen und angezeigt.
+- [ ] Man kann über den Zurück-Button des Geräts wieder zur Liste gelangen.
 
 ---
 
-### 4. Abschluss & Nächster Schritt
+### 4. Abschluss des Workshops 🎉
 
-Sie haben nun zwei Möglichkeiten, wie Sie im nächsten Lab weitermachen:
+Herzlichen Glückwunsch! Sie haben eine moderne, voll funktionsfähige Android-App mit professioneller Architektur (MVVM), State Management, API-Anbindung und Type-Safe Navigation gebaut!
 
-**Option A: Mit dem eigenen Code weiterarbeiten (Empfohlen)**
-Wenn bei Ihnen alles funktioniert und die echten Daten aus dem Internet geladen werden, bleiben Sie auf Ihrem Branch. Committen Sie Ihre Arbeit.
+**Option A: Genießen Sie Ihren Code!**
+Wenn Ihre App navigiert, fehlerfrei lädt und den Rotationstest besteht, haben Sie alle Konzepte des Modern Android Developments erfolgreich angewendet. Seien Sie stolz auf diesen Branch!
 
-**Option B: Das Sicherheitsnetz nutzen**
-Wenn Sie Netzwerkfehler erhalten oder das Setup nicht fehlerfrei hinbekommen haben, wechseln Sie auf unseren Lösungs-Branch.
-Verwerfen oder stashen Sie Ihre unfertigen Änderungen und führen Sie aus:
+**Option B: Das finale Projekt ansehen**
+Möchten Sie den perfekten, aufgeräumten Endstand des gesamten Workshops ansehen? Wechseln Sie auf den finalen Branch:
 ```git
-git checkout lab-5-navigation
+git checkout lab-6-final
 ```
 
-Dieser Branch enthält das voll funktionsfähige Netzwerk-Setup und ist die Basis für das letzte Modul: Navigation zwischen verschiedenen Screens.
+Hier finden Sie die fertige App als Referenz für Ihre eigenen zukünftigen Projekte.
