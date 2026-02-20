@@ -1,11 +1,12 @@
 package ninja.droiddojo.rickandmorty
 
 import kotlinx.serialization.json.Json
-import ninja.droiddojo.rickandmorty.data.CharacterRepository
-import ninja.droiddojo.rickandmorty.data.api.RickAndMortyApi
+import ninja.droiddojo.rickandmorty.character.data.CharacterRepository
+import ninja.droiddojo.rickandmorty.character.data.api.RickAndMortyApi
 import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import retrofit2.create
 
 object Dependencies {
     private val json = Json { ignoreUnknownKeys = true }
@@ -14,7 +15,7 @@ object Dependencies {
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 
-    private val rickAndMortyApi: RickAndMortyApi = retrofit.create(RickAndMortyApi::class.java)
+    private val rickAndMortyApi: RickAndMortyApi = retrofit.create()
 
     val characterRepository = CharacterRepository(rickAndMortyApi)
 }

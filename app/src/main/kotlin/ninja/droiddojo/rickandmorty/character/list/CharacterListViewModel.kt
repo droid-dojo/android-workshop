@@ -1,4 +1,4 @@
-package ninja.droiddojo.rickandmorty
+package ninja.droiddojo.rickandmorty.character.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,12 +7,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ninja.droiddojo.rickandmorty.data.CharacterRepository
+import ninja.droiddojo.rickandmorty.Dependencies
+import ninja.droiddojo.rickandmorty.character.data.CharacterRepository
 
 class CharacterListViewModel : ViewModel() {
     private val repository: CharacterRepository = Dependencies.characterRepository
-    private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<CharacterListUiState>(CharacterListUiState.Loading)
+    val uiState: StateFlow<CharacterListUiState> = _uiState.asStateFlow()
 
     init {
         loadCharacters()
@@ -23,9 +24,12 @@ class CharacterListViewModel : ViewModel() {
             _uiState.update {
                 try {
                     val characters = repository.getCharacters()
-                    UiState.Success(characters)
+                    CharacterListUiState.Success(characters)
                 } catch (e: Exception) {
-                    UiState.Error(e.message ?: "An unknown error occurred")
+                    e.printStackTrace()
+                    CharacterListUiState.Error(
+                        message = e.localizedMessage ?: "An unknown error occurred"
+                    )
                 }
             }
         }
@@ -34,7 +38,7 @@ class CharacterListViewModel : ViewModel() {
     fun toggleFavorite(characterId: Int) {
         _uiState.update { state ->
             when (state) {
-                is UiState.Success -> {
+                is CharacterListUiState.Success -> {
                     val updatedCharacters = state.characters.map { character ->
                         if (character.id == characterId) {
                             character.copy(isFavorite = !character.isFavorite)
@@ -44,6 +48,7 @@ class CharacterListViewModel : ViewModel() {
                     }
                     state.copy(characters = updatedCharacters)
                 }
+
                 else -> state
             }
         }
