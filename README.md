@@ -1,65 +1,86 @@
-# Lab 3: Interaktivität & Architektur (Das Gehirn der App)
+# Lab 4: Going Online (Networking & Coroutines)
 
-Bisher ist unsere App "dumm". Sie zeigt nur statische Dummy-Daten an. In diesem Lab bringen wir der App bei, sich Zustände zu merken (Favoriten) und diese Änderungen sauber durch eine moderne Architektur (MVVM) fließen zu lassen.
+In diesem Lab verabschieden wir uns von den lokalen Dummy-Daten. Wir binden die App an die echte "Rick & Morty"-API an, verarbeiten asynchrone Netzwerkaufrufe mit Coroutines und gehen professionell mit Ladezeiten und Fehlern um.
 
 **Zielzeit:** ca. 90-120 Minuten
-> **Hilfe:** Theorie und Syntax finden Sie im [📘 Handout](HANDOUT.md).
 
 ### 1. Vorbereitung
 Stellen Sie sicher, dass Sie startklar sind:
 * **Option A (Eigener Code):** Bleiben Sie auf Ihrem aktuellen Branch, wenn Sie die vorherige Aufgabe erfolgreich abgeschlossen haben.
-* **Option B (Sicherheitsnetz):** Wechseln Sie auf den Branch `lab-3-architecture`, wenn Sie unsere Musterlösung als Startpunkt nutzen möchten (`git checkout lab-3-architecture`).
+* **Option B (Sicherheitsnetz):** Wechseln Sie auf den Branch `lab-4-networking`, wenn Sie unsere Musterlösung als Startpunkt nutzen möchten (`git checkout lab-4-networking`).
 
 ---
 
 ### 2. Die Aufgaben
 
-#### Schritt 1: Das Datenmodell erweitern
-Wir möchten Charaktere als Favoriten markieren können.
-* Öffnen Sie Ihre `Character` Data Class.
-* Fügen Sie eine neue Eigenschaft `isFavorite` (Typ `Boolean`) hinzu.
-* Geben Sie der Eigenschaft den Standardwert `false`.
+#### Schritt 1: Die API-Antwort modellieren (DTOs)
+Die Rick & Morty API liefert uns JSON zurück. Wir benötigen Klassen, die exakt dieser JSON-Struktur entsprechen.
+* Erstellen Sie eine neue Datei `CharacterDto.kt` (Data Transfer Object).
+* Erstellen Sie eine `@Serializable` Data Class `CharacterDto` für einen einzelnen Charakter (Wichtige Felder laut API: `id`, `name`, `status`, `image`).
+* Erstellen Sie eine zweite `@Serializable` Data Class `CharacterResponse`, welche die gesamte Antwort abbildet.
+> **Tipp:** Die API liefert ein Objekt mit einer Liste namens `results`, in der die eigentlichen Charaktere liegen. Diese Liste müssen Sie in der `CharacterResponse` abbilden.
+* Fügen Sie in dieser Datei eine Erweiterungsfunktion `fun CharacterDto.toDomain(): Character` hinzu, um das DTO (Netzwerk) später in unser sauberes App-Modell (aus Lab 2) umzuwandeln.
+> **Tipp:** Beachten Sie beim Mapping, dass das API-Feld `image` in unserem Domain-Modell `imageUrl` heißt.
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 9.2 - JSON Parsing & Serialization](HANDOUT.md#92-json-parsing--serialization)
 
-#### Schritt 2: Das ViewModel erstellen
-Wir trennen die Logik von der UI.
-* Erstellen Sie eine neue Klasse `CharacterViewModel`, die von `ViewModel` erbt.
-* Legen Sie darin einen internen, veränderbaren Zustand (`MutableStateFlow`) an, der eine Liste von Charakteren hält. Initialisieren Sie diesen mit Ihren Dummy-Daten.
-* Exponieren Sie diesen Zustand zusätzlich als öffentlichen, unveränderbaren `StateFlow` (read-only für die UI).
-> Theorie und Syntax finden Sie in [📘 Modul 7.1 - Die Architektur MVVM](HANDOUT.md#71-die-architektur-mvvm) und [📘 Modul 7.3 - StateFlow](HANDOUT.md#73-stateflow-der-state-container)
+#### Schritt 2: Der API-Service (Retrofit)
+Wir müssen definieren, wie unsere HTTP-Anfragen aussehen.
+* Erstellen Sie ein Interface `RickAndMortyApi`.
+* Definieren Sie darin eine asynchrone Funktion, um alle Charaktere abzurufen.
+> **Tipp:** Nutzen Sie das Schlüsselwort `suspend`, damit die Funktion später in einer Coroutine ausgeführt werden kann, ohne die UI zu blockieren.
+* Annotieren Sie diese Funktion für einen HTTP-GET-Request auf den Endpunkt `"character"`. Als Rückgabetyp erwarten wir unsere `CharacterResponse`.
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 9.1 - Retrofit](HANDOUT.md#91-retrofit-der-typ-sichere-http-client)
 
-#### Schritt 3: Die Logik (Favoriten umschalten)
-Das ViewModel muss in der Lage sein, Daten zu ändern.
-* Schreiben Sie im ViewModel eine Funktion `toggleFavorite(characterId: Int)`.
-* Diese Funktion soll den Charakter mit der passenden ID in der Liste suchen, dessen `isFavorite` Status umkehren und die Liste im `StateFlow` aktualisieren.
-* *Tipp für Kotlin:* Da Data Classes unveränderlich (`val`) sind, iterieren Sie durch die Liste (z.B. mit `.map { ... }`), prüfen Sie die ID, und nutzen Sie `.copy(isFavorite = !it.isFavorite)` für den getroffenen Charakter, um eine neue Liste zu erzeugen.
+#### Schritt 3: Das Repository
+Das ViewModel soll sich nicht direkt um HTTP-Requests kümmern. Wir bauen einen Vermittler.
+* Erstellen Sie eine Klasse `CharacterRepository`.
+* Übergeben Sie die `RickAndMortyApi` als Parameter im Konstruktor.
+* Schreiben Sie eine asynchrone Funktion `getCharacters()`, welche die API aufruft, die `results` Liste nimmt, jedes DTO in unser Domain-Modell (`Character`) umwandelt und diese finale Liste zurückgibt.
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 10 - The Repository Pattern](HANDOUT.md#103-implementierung)
 
-#### Schritt 4: State Hoisting im Item
-Unser `CharacterItem` muss nun ein klickbares Herz anzeigen, darf seinen Zustand aber nicht selbst verwalten.
-* Fügen Sie der `CharacterItem` Funktion einen neuen Parameter hinzu: Ein Event-Lambda namens `onFavoriteClick`, das aufgerufen wird, wenn das Herz geklickt wird.
-* Fügen Sie im Layout (z.B. rechts neben Name/Status) ein `Icon`-Composable ein.
-* Machen Sie das Icon über den Modifier klickbar (`clickable`) und rufen Sie dort Ihr neues Lambda auf.
-* Ändern Sie das Aussehen des Icons basierend auf `character.isFavorite` (z.B. ein gefülltes Herz vs. ein leeres Herz). Färben Sie ein aktives Herz farbig ein (z.B. Rot).
-> Theorie und Syntax finden Sie in [📘 Modul 6.3 - State Hoisting](HANDOUT.md#63-state-hoisting-teile-und-herrsche)
+#### Schritt 4: UI State definieren (Sealed Interface)
+Wenn wir Daten aus dem Netz laden, brauchen wir mehr als nur eine Liste. Wir müssen wissen, ob wir gerade laden oder ob ein Fehler passiert ist.
+* Erstellen Sie in (oder bei) der ViewModel-Datei ein `sealed interface UiState`.
+* Definieren Sie drei Zustände: `Loading` (Object), `Success` (Data Class mit der Liste der Charaktere) und `Error` (Data Class mit einer Fehlermeldung als String).
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 7.2 - Der UI State](HANDOUT.md#72-der-ui-state-warum-eine-eigene-klasse)
 
-#### Schritt 5: Die UI verdrahten
-Nun bringen wir Screen, Item und ViewModel zusammen.
-* Öffnen Sie Ihren `CharacterListScreen`.
-* Erstellen Sie das ViewModel als Parameter der Screen-Funktion (nutzen Sie die Compose-Funktion `viewModel()`).
-* Wandeln Sie den `StateFlow` des ViewModels in einen Compose-State um, damit die UI auf Änderungen reagiert.
-* Übergeben Sie die Liste aus dem nun beobachteten State an Ihre `LazyColumn`.
-* Reichen Sie bei jedem `CharacterItem` in der Liste das `onFavoriteClick`-Event an das ViewModel durch (`viewModel.toggleFavorite(id)`).
-> Theorie und Syntax finden Sie in [📘 Modul 7.4 - Side Effects & State konsumieren](HANDOUT.md#74-side-effects-launchedeffect)
+#### Schritt 5: Das ViewModel umbauen
+Jetzt verknüpfen wir die Logik und löschen die Dummy-Daten!
+* Ersetzen Sie den alten `StateFlow` (der nur eine Liste hielt) durch einen, der unseren neuen `UiState` hält. Der Startwert sollte `UiState.Loading` sein.
+* Entfernen Sie die initiale Dummy-Liste.
+* Übergeben Sie das `CharacterRepository` an das ViewModel.
+* Schreiben Sie eine Funktion `loadCharacters()`. Starten Sie darin eine Coroutine (`viewModelScope.launch`).
+* Führen Sie den asynchronen Repository-Aufruf aus. Setzen Sie den State bei Erfolg auf `Success` und fangen Sie Fehler mit einem `try-catch`-Block ab.
+> **Tipp:** Setzen Sie im `catch`-Block den State auf `Error` und übergeben Sie die Fehlermeldung der geworfenen Exception.
+* Rufen Sie `loadCharacters()` im `init`-Block des ViewModels auf, damit die Daten beim Start automatisch geladen werden.
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 8.1 - Coroutines](HANDOUT.md#81-coroutines-async-einfach-gemacht)
 
-#### Schritt 6: Previews anpassen
-Ihre Previews benötigen nun Dummy-Werte für die neuen Parameter (z.B. ein leeres Lambda `{ }` für Events). Passen Sie diese an, damit Android Studio keine Fehler anzeigt.
+#### Schritt 6: State Hoisting im Screen
+Damit wir das UI gut testen und anzeigen können, trennen wir den Screen in einen "smarten" und einen "dummen" Teil auf.
+* Benennen Sie Ihre bisherige Composable `CharacterListScreen` um in `CharacterListContent`.
+* Passen Sie die Parameter von `CharacterListContent` an: Es darf kein ViewModel mehr kennen! Es soll stattdessen den `state: UiState` und das Event `onFavoriteClick: (Int) -> Unit` entgegennehmen.
+* Nutzen Sie innerhalb von `CharacterListContent` ein `when(state)` Konstrukt:
+    * Bei `Loading`: Zeigen Sie einen `CircularProgressIndicator` (zentriert) an.
+    * Bei `Error`: Zeigen Sie einen Text mit der Fehlermeldung an.
+    * Bei `Success`: Zeigen Sie Ihre `LazyColumn` (Ihre bisherige Liste) mit den geladenen Daten an!
+* Erstellen Sie nun eine **neue** Funktion `CharacterListScreen`, welche das ViewModel instanziiert, den State einsammelt (`collectAsStateWithLifecycle`) und an `CharacterListContent` weitergibt.
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 6.3 - State Hoisting](HANDOUT.md#63-state-hoisting-teile-und-herrsche) und [📘 Modul 7.5 - UI State konsumieren](HANDOUT.md#75-der-kreis-schlie%C3%9Ft-sich-ui-state-konsumieren)
+
+#### Schritt 7: Previews für alle Zustände
+* Erstellen Sie drei separate `@Preview` Funktionen.
+* Preview 1 (`LoadingPreview`): Rufen Sie `CharacterListContent` auf und übergeben Sie `UiState.Loading`.
+* Preview 2 (`ErrorPreview`): Übergeben Sie `UiState.Error("Keine Internetverbindung")`.
+* Preview 3 (`SuccessPreview`): Übergeben Sie `UiState.Success` und nutzen Sie Ihre `getDummyCharacters()` Funktion, um Beispieldaten in die Preview zu laden.
+> **Tipp:** Da `CharacterListContent` nun "stateless" ist, können wir jeden Zustand perfekt simulieren, ohne das ViewModel oder eine Internetverbindung zu benötigen.
 
 ---
 
 ### 3. Akzeptanzkriterien (Definition of Done)
-- [ ] Jedes Element in der Liste zeigt ein Herz-Icon.
-- [ ] Wenn man auf das Herz klickt, füllt es sich bzw. wird wieder leer.
-- [ ] Die UI (`CharacterItem`) verwaltet keinen eigenen State (`remember` wird hier *nicht* für den Favoriten-Status genutzt).
-- [ ] **Der Härtetest:** Markieren Sie ein Element als Favorit. Drehen Sie Ihr Gerät (oder den Emulator) ins Querformat. Der Favoriten-Status muss erhalten bleiben! (Das beweist, dass das ViewModel greift).
+- [ ] Die Dummy-Daten werden im laufenden Betrieb der App nicht mehr genutzt.
+- [ ] Es existieren 3 Previews, die Ladering, Fehlertext und Liste korrekt darstellen.
+- [ ] Wenn die App startet, ist für einen kurzen Moment ein Lade-Kringel (Spinner) zu sehen.
+- [ ] Danach erscheint die Liste mit echten Namen ("Rick Sanchez", "Morty Smith") und Bildern aus dem Netz.
+- [ ] **Der Härtetest:** Schalten Sie den Emulator/Ihr Gerät in den Flugmodus und starten Sie die App neu. Die App zeigt nun anstelle eines Absturzes Ihre modellierte Fehlermeldung auf dem Bildschirm an!
 
 ---
 
@@ -68,13 +89,13 @@ Ihre Previews benötigen nun Dummy-Werte für die neuen Parameter (z.B. ein leer
 Sie haben nun zwei Möglichkeiten, wie Sie im nächsten Lab weitermachen:
 
 **Option A: Mit dem eigenen Code weiterarbeiten (Empfohlen)**
-Wenn bei Ihnen alles funktioniert und der "Härtetest" (Bildschirm drehen) erfolgreich war, bleiben Sie auf Ihrem Branch. Committen Sie Ihre Arbeit.
+Wenn bei Ihnen alles funktioniert und die echten Daten aus dem Internet geladen werden, bleiben Sie auf Ihrem Branch. Committen Sie Ihre Arbeit.
 
 **Option B: Das Sicherheitsnetz nutzen**
-Wenn etwas nicht klappt (z.B. der Klick nicht reagiert) oder Sie das ViewModel überspringen wollen, wechseln Sie auf unseren Lösungs-Branch.
+Wenn Sie Netzwerkfehler erhalten oder das Setup nicht fehlerfrei hinbekommen haben, wechseln Sie auf unseren Lösungs-Branch.
 Verwerfen oder stashen Sie Ihre unfertigen Änderungen und führen Sie aus:
 ```git
-git checkout lab-4-networking
+git checkout lab-5-navigation
 ```
 
-Dieser Branch enthält das fertige ViewModel und ist die Basis für das Anbinden echter Daten aus dem Internet.
+Dieser Branch enthält das voll funktionsfähige Netzwerk-Setup und ist die Basis für das letzte Modul: Navigation zwischen verschiedenen Screens.

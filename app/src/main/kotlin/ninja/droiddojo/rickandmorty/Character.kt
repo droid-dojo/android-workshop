@@ -4,7 +4,8 @@ data class Character(
     val id: Int,
     val name: String,
     val status: String,
-    val imageUrl: String
+    val imageUrl: String,
+    val isFavorite: Boolean = false
 )
 
 fun getDummyCharacters(): List<Character> {
