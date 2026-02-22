@@ -829,7 +829,7 @@ sealed interface UiState {
 }
 ```
 
-**Der Modul 1-8 State State (Character):**
+**Das Datenmodell (Character):**
 ```kotlin
 data class Character(val name: String, val status: String)
 ```
