@@ -41,6 +41,9 @@ Wir wollen konsistente Schriften nutzen, die auch im Dark Mode funktionieren.
 
 #### Schritt 4: Echte Bilder laden (Coil)
 Der blaue Kasten hat ausgedient. Wir wollen das Bild aus der URL laden.
+
+> **Voraussetzung:** Für diesen Schritt benötigen Sie die **Coil**-Bibliothek. Diese ist noch nicht im Projekt enthalten. Fügen Sie die Versionen und Libraries in `gradle/libs.versions.toml` hinzu und binden Sie `coil-compose` sowie `coil-network-okhttp` in der `app/build.gradle.kts` ein. Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
+
 * Ersetzen Sie die `Box` durch die `AsyncImage` Composable aus der Coil-Bibliothek.
 * Übergeben Sie als `model` die `imageUrl` des Charakters.
 * Wenden Sie Modifier an, um die Größe auf `80.dp` zu belassen und das Bild kreisrund zuzuschneiden.
