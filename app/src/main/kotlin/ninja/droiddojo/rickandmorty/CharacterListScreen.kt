@@ -10,7 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,7 +27,7 @@ import coil3.compose.LocalAsyncImagePreviewHandler
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CharacterListScreen(characterViewModel: CharacterViewModel = viewModel()) {
-    val characters by characterViewModel.characters.collectAsState()
+    val characters by characterViewModel.characters.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
