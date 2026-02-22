@@ -762,8 +762,8 @@ Die Funktion bekommt zwei Dinge als Parameter:
 
 ```mermaid
 graph TD
-    UI[Stateless UI] -->|Events (onClick)| VM[Logik / Parent]
-    VM -->|State (Data)| UI
+    UI[Stateless UI] -->|"Events (onClick)"| VM["Logik / Parent"]
+    VM -->|"State (Data)"| UI
 ```
 
 ```kotlin
@@ -802,9 +802,9 @@ Wir trennen unsere App in drei Schichten (Model - View - ViewModel), um den Code
 
 ```mermaid
 graph TD
-    View[View (Compose UI)] -->|Beobachtet State| ViewModel
-    View -->|Sendet Events (Klicks)| ViewModel
-    ViewModel -->|Läd Daten| Model[Model / Repository]
+    View["View (Compose UI)"] -->|"Sendet Events (Klicks)"| ViewModel
+    ViewModel -->|State| View
+    ViewModel -->|Lädt Daten| Model[Model / Repository]
     Model -->|Liefert Daten| ViewModel
 ```
 
@@ -1065,11 +1065,11 @@ Dafür gibt es das **Repository**. Es ist die "Single Source of Truth" für Date
 
 ```mermaid
 graph TD
-    UI[UI Layer (Compose)] -->|Event| VM[ViewModel]
+    UI["UI Layer (Compose)"] -->|Event| VM[ViewModel]
     VM -->|Data Stream| UI
     VM -->|Request| Repo[Repository]
-    Repo -->|Suspending Call| API[Remote Data Source (Retrofit)]
-    Repo -->|Suspending Call| DB[Local Data Source (Room DB)]
+    Repo -->|Suspending Call| API["Remote Data Source (Retrofit)"]
+    Repo -->|Suspending Call| DB["Local Data Source (Room DB)"]
 ```
 
 **Vorteile:**
