@@ -13,7 +13,7 @@ Stellen Sie sicher, dass Sie startklar sind:
 
 ---
 
-> **Voraussetzung:** Dieses Lab benötigt **Retrofit**, **kotlinx-serialization** und das dazugehörige Gradle-Plugin, die noch nicht im Projekt enthalten sind. Fügen Sie die Versionen, Libraries und das Plugin in `gradle/libs.versions.toml` hinzu und binden Sie `retrofit-core`, `retrofit-kotlinx-serialization` sowie `kotlinx-serialization-json` in der `app/build.gradle.kts` ein. Vergessen Sie nicht, das Serialization-Plugin im `plugins`-Block zu laden! Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
+> **Voraussetzung:** Dieses Lab benötigt die **Navigation Compose**-Bibliothek, die noch nicht im Projekt enthalten ist. Fügen Sie die Version und Library in `gradle/libs.versions.toml` hinzu und binden Sie `androidx-navigation-compose` in der `app/build.gradle.kts` ein. Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
 
 ### 2. Die Aufgaben
 
