@@ -62,7 +62,7 @@ fun CharacterItem(character: Character, modifier: Modifier = Modifier) {
 @PreviewLightDark
 @PreviewDynamicColors
 @Composable
-private fun Preview() {
+private fun CharacterItemPreview() {
     val previewHandler = AsyncImagePreviewHandler {
         ColorImage(Color.Red.toArgb())
     }

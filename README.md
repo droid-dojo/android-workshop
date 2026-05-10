@@ -10,6 +10,13 @@ Stellen Sie sicher, dass Sie startklar sind:
 * **Option A (Eigener Code):** Bleiben Sie auf Ihrem aktuellen Branch, wenn Sie die vorherige Aufgabe erfolgreich abgeschlossen haben.
 * **Option B (Sicherheitsnetz):** Wechseln Sie auf den Branch `lab-3-architecture`, wenn Sie unsere Musterlösung als Startpunkt nutzen möchten (`git checkout lab-3-architecture`).
 
+> **Voraussetzung:** Dieses Lab benötigt drei zusätzliche Libraries:
+> * `androidx.lifecycle:lifecycle-viewmodel-compose` — für die Compose-Funktion `viewModel()` (Schritt 5).
+> * `androidx.lifecycle:lifecycle-runtime-compose` — für `collectAsStateWithLifecycle()` (Schritt 5).
+> * `androidx.compose.material:material-icons-extended` — für `Icons.Default.FavoriteBorder` (Schritt 4).
+>
+> Fügen Sie die Versionen und Libraries in `gradle/libs.versions.toml` hinzu und binden Sie die drei Implementierungen in der `app/build.gradle.kts` ein. Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
+
 ---
 
 ### 2. Die Aufgaben
@@ -48,7 +55,7 @@ Nun bringen wir Screen, Item und ViewModel zusammen.
 * Wandeln Sie den `StateFlow` des ViewModels in einen Compose-State um, damit die UI auf Änderungen reagiert.
 * Übergeben Sie die Liste aus dem nun beobachteten State an Ihre `LazyColumn`.
 * Reichen Sie bei jedem `CharacterItem` in der Liste das `onFavoriteClick`-Event an das ViewModel durch (`viewModel.toggleFavorite(id)`).
-> Theorie und Syntax finden Sie in [📘 Modul 7.4 - Side Effects & State konsumieren](HANDOUT.md#74-side-effects-launchedeffect)
+> Theorie und Syntax finden Sie in [📘 Modul 7.5 - UI State konsumieren](HANDOUT.md#75-der-kreis-schlie%C3%9Ft-sich-ui-state-konsumieren)
 
 #### Schritt 6: Previews anpassen
 Ihre Previews benötigen nun Dummy-Werte für die neuen Parameter (z.B. ein leeres Lambda `{ }` für Events). Passen Sie diese an, damit Android Studio keine Fehler anzeigt.

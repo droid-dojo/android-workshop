@@ -52,13 +52,13 @@ Kotlin zwingt uns, eine bewusste Entscheidung zu treffen. Wir unterscheiden stri
 * **`var` (Variable):** Mutable. Der Wert kann sich ändern.
 
 ```kotlin
-// Empfohlen: Read-only (Der Standard)
+// Recommended: read-only (the default)
 val shopName = "Needful Things"
-// shopName = "Wallmart" // Compiler-Fehler!
+// shopName = "Wallmart" // Compile error!
 
-// Nur wenn nötig: Mutable
+// Only if needed: mutable
 var itemsInCart = 0
-itemsInCart = 1 // Das ist erlaubt
+itemsInCart = 1 // Allowed
 ```
 
 > **Faustregel:**
@@ -97,9 +97,9 @@ Oft wollen wir einen Code-Block nur ausführen, wenn eine Variable nicht null is
 ```kotlin
 val imageUrl: String? = ...
 
-// Nur ausführen, wenn imageUrl NICHT null ist
+// Only run if imageUrl is NOT null
 imageUrl?.let { url ->
-    // Hier drin ist 'url' garantiert ein String (nicht nullable)
+    // Inside here 'url' is guaranteed non-null
     loadImage(url)
 }
 ```
@@ -119,13 +119,13 @@ Wir definieren Standardwerte direkt in der Funktion.
 ```kotlin
 fun createUser(
     name: String,
-    isActive: Boolean = true, // Standardwert
-    role: String = "User"     // Standardwert
+    isActive: Boolean = true, // Default value
+    role: String = "User"     // Default value
 )
 
-// Aufrufe:
-createUser("Rick") // Nimmt Defaults für isActive & role
-createUser("Morty", false) // Überschreibt isActive
+// Calls:
+createUser("Rick") // Uses defaults for isActive & role
+createUser("Morty", false) // Overrides isActive
 ```
 
 ### 1.4 Funktionen: Named Arguments
@@ -140,7 +140,7 @@ Wir benennen die Parameter beim Aufruf. Die Reihenfolge ist dann egal!
 createUser(
     name = "Rick",
     role = "Admin"
-    // isActive wird übersprungen und bleibt true
+    // isActive is skipped and stays true
 )
 ```
 
@@ -159,7 +159,7 @@ Text(text = "Hallo", color = Color.Red)
 Wir wollen Code definieren, der "später" ausgeführt wird (z.B. bei Klick). In Java brauchten wir dafür Interfaces (Listeners).
 
 ```java
-// Java - Viel Boilerplate für wenig Logik
+// Java — lots of boilerplate for little logic
 button.setOnClickListener(new OnClickListener() {
     @Override
     public void onClick(View v) {
@@ -174,7 +174,7 @@ Funktionen sind Variablen. Wir können Code-Blöcke (Lambdas) speichern und übe
 **Definition:** `val name = { parameter -> code }`
 
 ```kotlin
-// Ein Lambda, das zwei Ints nimmt und einen Int zurückgibt
+// A lambda that takes two Ints and returns an Int
 val sum = { a: Int, b: Int -> 
     a + b 
 }
@@ -188,15 +188,15 @@ Das ist die Syntax, die Compose möglich macht.
 Wenn der *letzte* Parameter einer Funktion ein Lambda ist, darf man es *außerhalb* der Klammern schreiben.
 
 ```kotlin
-// Funktion, die 'data' und eine 'action' erwartet
+// A function expecting 'data' and an 'action'
 fun doSomething(data: String, action: () -> Unit) { ... }
 
-// Option A: In der Klammer (Schlecht lesbar)
-doSomething("Daten", { println("Fertig") })
+// Option A: inside the parens (hard to read)
+doSomething("Data", { println("Done") })
 
-// Option B: Trailing Lambda (Sauber)
-doSomething("Daten") {
-    println("Fertig")
+// Option B: trailing lambda (clean)
+doSomething("Data") {
+    println("Done")
 }
 ```
 
@@ -290,7 +290,7 @@ Man definiert die View in XML und sucht sie im Java-Code, um sie zu verändern.
 ```
 
 ```java
-// Java / Kotlin (Imperativ)
+// Java / Kotlin (imperative)
 Button button = findViewById(R.id.myButton);
 button.setText("Klick mich");
 button.setOnClickListener(v -> {
@@ -302,7 +302,7 @@ button.setOnClickListener(v -> {
 UI und Logik sind eins. Der Zustand (`clicked`) bestimmt, was gezeichnet wird.
 
 ```kotlin
-// Kotlin (Deklarativ)
+// Kotlin (declarative)
 @Composable
 fun MyButton() {
     var clicked by remember { mutableStateOf(false) }
@@ -328,7 +328,7 @@ Hier ein einfaches Beispiel ohne Zusatz-Parameter. Eine `Row` innerhalb einer `C
 Column {
     Text("Oben")
     
-    // Eine Zeile IN der Spalte
+    // A row INSIDE the column
     Row {
         Text("Links")
         Text("Rechts")
@@ -399,14 +399,14 @@ Ein Modifier "wickelt" das Element (und vorherige Modifier) ein.
 **Beispiel: Background vs. Clip**
 
 ```kotlin
-// 1. Erst Hintergrund (Rot), dann Clip (Kreis)
-// Ergebnis: Ein rotes Quadrat! Der Clip wirkt nur auf den Inhalt (Text), nicht auf den roten Hintergrund davor.
+// 1. Background first (red), then clip (circle)
+// Result: a red square! The clip applies only to the content drawn after it, not to the red background drawn before.
 Modifier
     .background(Color.Red)
     .clip(CircleShape)
 
-// 2. Erst Clip (Kreis), dann Hintergrund (Rot)
-// Ergebnis: Ein roter Kreis! Der Hintergrund wird innerhalb der Form des Clips gezeichnet.
+// 2. Clip first (circle), then background (red)
+// Result: a red circle! The background is drawn inside the clip's shape.
 Modifier
     .clip(CircleShape)
     .background(Color.Red)
@@ -475,7 +475,47 @@ Alle Dateien im Ordner `res/` werden automatisch kompiliert und über die Klasse
 
 ## Modul 3: Listen & Performance
 
-### 3.1 LazyColumn: Listen performant anzeigen
+### 3.1 Datenmodellierung: Die `data class`
+
+Bevor wir Listen bauen können, brauchen wir ein **Datenmodell**: eine Beschreibung, wie ein einzelner Eintrag aussieht. In Kotlin nutzen wir dafür eine `data class`.
+
+**Was macht eine `data class` besonders?**
+Eine normale Klasse müsste man für sauberen Vergleich, Logging und Kopien manuell mit `equals()`, `hashCode()`, `toString()` und `copy()` ausstatten. Die `data class` generiert all das automatisch — wir geben nur die Properties an.
+
+```kotlin
+data class Character(
+    val id: Int,
+    val name: String,
+    val status: String,
+    val imageUrl: String
+)
+```
+
+**Was uns Kotlin geschenkt hat:**
+*   **`equals()` & `hashCode()`:** Zwei `Character` mit gleichen Werten gelten als gleich (wichtig für Listen-Vergleiche und Compose-Recomposition).
+*   **`toString()`:** `Character(id=1, name=Rick, ...)` — perfekt für Logging.
+*   **`copy()`:** Neue Instanz mit geänderten Feldern, ohne den Rest manuell durchzureichen.
+
+```kotlin
+val rick = Character(1, "Rick Sanchez", "Alive", "...jpg")
+val rickAsFavorite = rick.copy(isFavorite = true) // Nur ein Feld geändert
+```
+
+**Faustregel:**
+> Alles, was nur Daten transportiert, ist eine `data class`.
+> Properties bevorzugt als `val` — Unveränderlichkeit verhindert Bugs bei Compose-Recomposition.
+
+**Dummy-Daten als Hilfsfunktion:**
+Während wir noch keine echte API haben, geben wir uns Test-Daten direkt im Code:
+
+```kotlin
+fun getDummyCharacters(): List<Character> = listOf(
+    Character(1, "Rick Sanchez", "Alive", "https://rickandmortyapi.com/api/character/avatar/1.jpeg"),
+    Character(2, "Morty Smith", "Alive", "https://rickandmortyapi.com/api/character/avatar/2.jpeg"),
+)
+```
+
+### 3.2 LazyColumn: Listen performant anzeigen
 
 **Warum nicht einfach eine `Column`?**
 Eine `Column` rendert **alle** ihre Kinder sofort. Bei 5 Items ist das okay. Bei 1000 Items wird die App langsam und stürzt eventuell ab (Out of Memory), weil alle 1000 Views gleichzeitig im Speicher gehalten und gezeichnet werden, auch wenn nur 5 sichtbar sind.
@@ -487,12 +527,12 @@ Die `LazyColumn` rendert nur die Elemente, die gerade auf dem Bildschirm sichtba
 val characters = listOf("Rick", "Morty", "Summer", "Beth")
 
 LazyColumn {
-    // 1. Statischer Inhalt (Einmalig)
+    // 1. Static content (once)
     item {
-        Text("Meine Charakter Liste", fontSize = 24.sp)
+        Text("My character list", fontSize = 24.sp)
     }
 
-    // 2. Dynamische Liste (Wiederholt)
+    // 2. Dynamic list (repeated)
     items(characters) { name ->
         Text(text = name, modifier = Modifier.padding(16.dp))
     }
@@ -504,7 +544,7 @@ LazyColumn {
 *   **item { ... }:** Fügt ein einzelnes Composable hinzu (z.B. Header, Footer).
 *   **items(list) { ... }:** Iteriert über eine Liste und erstellt für jeden Eintrag ein Composable.
 
-### 3.2 Custom Items: Modularisierung & Wiederverwendbarkeit
+### 3.3 Custom Items: Modularisierung & Wiederverwendbarkeit
 
 Statt riesige Code-Blöcke in der `LazyColumn` zu schreiben, lagern wir das UI für einen einzelnen Eintrag in ein eigenes Composable aus (`CharacterItem`).
 
@@ -516,15 +556,15 @@ Statt riesige Code-Blöcke in der `LazyColumn` zu schreiben, lagern wir das UI f
 ```kotlin
 @Composable
 fun CharacterItem(name: String, status: String) {
-    // Ein einfaches Layout für unsere Karte
+    // Simple layout for our card
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .background(Color.LightGray) // Temporärer Hintergrund
+            .background(Color.LightGray) // Temporary background
             .padding(16.dp)
     ) {
-        // Platzhalter für Bild
+        // Image placeholder
         Box(modifier = Modifier.size(60.dp).background(Color.DarkGray))
         
         Spacer(modifier = Modifier.width(16.dp))
@@ -565,11 +605,11 @@ Wir definieren unsere Design-Regeln an **einer zentralen Stelle**. Das Theme ist
 ```kotlin
 @Composable
 fun RickAndMortyTheme(
-    // Prüft automatisch: Ist das System im Dark Mode?
+    // Auto-detects: is the system in dark mode?
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    // Wählt automatisch die passenden Farben
+    // Auto-picks the matching color scheme
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
@@ -584,11 +624,11 @@ fun RickAndMortyTheme(
 Wir nutzen *niemals* feste Farben (`Color.Red`), sondern beziehen uns auf die *Rolle* der Farbe im Theme.
 
 ```kotlin
-// Falsch (Hardcoded):
-Text("Hallo", color = Color.Black) // Bleibt auch im Dark Mode schwarz (unsichtbar auf dunklem Grund!)
+// Wrong (hardcoded):
+Text("Hallo", color = Color.Black) // Stays black even in dark mode (invisible on dark surface!)
 
-// Richtig (Semantisch):
-Text("Hallo", color = MaterialTheme.colorScheme.onSurface) // Passt sich automatisch an
+// Correct (semantic):
+Text("Hallo", color = MaterialTheme.colorScheme.onSurface) // Adapts automatically
 ```
 
 > **Dokumentation:**
@@ -608,10 +648,10 @@ Scaffold(
         CenterAlignedTopAppBar(title = { Text("Rick & Morty") }) 
     }
 ) { innerPadding ->
-    // WICHTIG: innerPadding muss an den Content übergeben werden!
-    // Es verhindert, dass unser Inhalt hinter der TopBar verschwindet.
+    // IMPORTANT: innerPadding must be passed to the content!
+    // Otherwise our content disappears behind the TopBar.
     Box(modifier = Modifier.padding(innerPadding)) {
-        // Hier kommt unser Screen Content hin
+        // Our screen content goes here
         CharacterList()
     }
 }
@@ -624,14 +664,14 @@ Für Listeneinträge nutzen wir oft eine `Card`. Sie bietet Schatten (Elevation)
 ```kotlin
 Card(
     modifier = Modifier.fillMaxWidth().padding(8.dp),
-    onClick = { /* Klick Event */ } // Cards sind klickbar!
+    onClick = { /* click event */ } // Cards are clickable!
 ) {
-    // Inhalt der Karte (z.B. Row mit Bild und Text)
+    // Card content (e.g., a row with image and text)
     Row(
         modifier = Modifier.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Beispiel Bild
+        // Example image
         Box(modifier = Modifier.size(50.dp).background(Color.Gray, CircleShape))
         
         Spacer(modifier = Modifier.width(16.dp))
@@ -683,14 +723,14 @@ SubcomposeAsyncImage(
     contentDescription = stringResource(R.string.character_image_description),
     modifier = Modifier.size(60.dp).clip(CircleShape),
     
-    // Slot für den Lade-Zustand (wird angezeigt, solange das Bild lädt)
+    // Slot for the loading state (shown while the image is loading)
     loading = {
         CircularProgressIndicator(modifier = Modifier.padding(20.dp))
     },
     
-    // Slot für Fehler (falls URL falsch oder kein Internet)
+    // Slot for errors (e.g., bad URL or no internet)
     error = {
-        Icon(Icons.Default.Error, contentDescription = "Fehler")
+        Icon(Icons.Default.Error, contentDescription = "Error")
     }
 )
 ```
@@ -725,23 +765,23 @@ Lokale Variablen gehen also bei jedem Re-Draw verloren!
 
 **Das Problem:**
 ```kotlin
-var count = 0 // Wird bei jeder Recomposition wieder 0!
+var count = 0 // Reset to 0 on every recomposition!
 Button(onClick = { count++ }) {
    Text("Count: $count") 
 }
-// Anzeige bleibt immer "Count: 0"
+// Display stays "Count: 0" forever
 ```
 
 **Die Lösung (`remember`):**
 Wir müssen Compose sagen: "Merk dir diesen Wert über Recompositions hinweg!"
 
 ```kotlin
-// remember: Merk dir den Wert.
-// mutableStateOf: Sag Compose Bescheid, wenn sich der Wert ändert.
+// remember: keep this value across recompositions.
+// mutableStateOf: notify Compose when the value changes.
 var count by remember { mutableStateOf(0) }
 
 Button(onClick = { count++ }) {
-   Text("Count: $count") // Wenn count wächst, wird neu gezeichnet!
+   Text("Count: $count") // When count changes, the UI re-renders!
 }
 ```
 
@@ -767,19 +807,19 @@ graph TD
 ```
 
 ```kotlin
-// Stateful Composable (Hat internen State -> gut für Screens)
+// Stateful composable (owns internal state — good for screens)
 @Composable
 fun CounterScreen() {
     var count by remember { mutableStateOf(0) }
     
-    // Ruft die Stateless Version auf
+    // Calls the stateless version
     CounterContent(
         count = count,
         onIncrement = { count++ }
     )
 }
 
-// Stateless Composable (Dumm & Wiederverwendbar)
+// Stateless composable (dumb & reusable)
 @Composable
 fun CounterContent(count: Int, onIncrement: () -> Unit) {
     Button(onClick = onIncrement) {
@@ -818,13 +858,13 @@ Ein `sealed interface` definiert eine **geschlossene Menge** an möglichen Zust�
 
 ```kotlin
 sealed interface UiState {
-    // 1. Loading: Keine Daten, nur Ladering
+    // 1. Loading: no data yet, just a spinner
     data object Loading : UiState
     
-    // 2. Success: Wir haben Daten (die Liste)
+    // 2. Success: we have data (the list)
     data class Success(val characters: List<Character>) : UiState
     
-    // 3. Error: Etwas ging schief (Nachricht)
+    // 3. Error: something went wrong (message)
     data class Error(val message: String) : UiState
 }
 ```
@@ -842,8 +882,8 @@ Zusätzlich macht Kotlin einen **Smart Cast**. Im `is UiState.Success` Block wei
 ```kotlin
 when (state) {
     is UiState.Loading -> ShowSpinner()
-    is UiState.Success -> ShowList(state.characters) // Zugriff auf .characters möglich!
-    is UiState.Error -> ShowError(state.message) // Zugriff auf .message möglich!
+    is UiState.Success -> ShowList(state.characters) // .characters is accessible here!
+    is UiState.Error -> ShowError(state.message) // .message is accessible here!
 }
 ```
 
@@ -861,14 +901,14 @@ Wir brauchen einen Container im ViewModel, der den aktuellen Zustand hält und d
 ```kotlin
 class CharacterViewModel : ViewModel() {
     
-    // 1. Interner Mutable State (Wir können ihn ändern)
+    // 1. Internal mutable state (we can change it)
     private val _uiState = MutableStateFlow("Lade Daten...")
     
-    // 2. Öffentlicher Immutable State (Die UI darf nur lesen!)
+    // 2. Public immutable state (the UI is read-only!)
     val uiState: StateFlow<String> = _uiState.asStateFlow()
 
     fun loadData() {
-        // Simuliere Netzwerk-Call
+        // Simulate a network call
         _uiState.value = "Rick Sanchez"
     }
 }
@@ -885,13 +925,13 @@ Wir brauchen einen sicheren Ort für "Seiteneffekte" (Side Effects), der nur **e
 ```kotlin
 @Composable
 fun CharacterScreen(viewModel: CharacterViewModel = viewModel()) {
-    // Wandelt den Flow in State für Compose um
+    // Converts the Flow into Compose state
     val state by viewModel.uiState.collectAsStateWithLifecycle() 
     
     Text(text = "Name: $state")
     
-    // WICHTIG: API Calls gehören in einen Effect!
-    // Unit als Key bedeutet: "Führe diesen Block genau EINMAL aus, wenn das Composable zum ersten Mal angezeigt wird."
+    // IMPORTANT: API calls belong in an effect!
+    // Unit as the key means: "run this block exactly ONCE on first composition."
     LaunchedEffect(Unit) {
         viewModel.loadData()
     }
@@ -910,15 +950,15 @@ Wie reagiert die UI nun auf die verschiedenen Zustände? Mit unserem Sealed Inte
 fun CharacterScreen(state: UiState) {
     when (state) {
         is UiState.Loading -> {
-            // Zeige Lade-Indikator
+            // Show loading indicator
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
         is UiState.Error -> {
-            // Zeige Fehler-Nachricht
+            // Show error message
             Text("Fehler: ${state.message}", color = MaterialTheme.colorScheme.error)
         }
         is UiState.Success -> {
-            // Zeige die Liste
+            // Show the list
             LazyColumn {
                 items(state.characters) { character ->
                     CharacterItem(character)
@@ -951,19 +991,19 @@ Im ViewModel nutzen wir `viewModelScope`. Wenn das ViewModel stirbt (Screen gesc
 > Starte niemals Coroutinen direkt im Composable (`rememberCoroutineScope` ist nur für UI-Events wie Scrollen gedacht).
 
 ```kotlin
-// Im ViewModel:
+// Inside the ViewModel:
 fun loadData() {
     viewModelScope.launch { 
-        // Wir sind jetzt asynchron
-        val result = api.getData() // Pausiert hier (suspend), blockiert aber NICHT den Thread
-        _uiState.value = result    // Danach gehts weiter
+        // We're asynchronous now
+        val result = api.getData() // Suspends here, but does NOT block the thread
+        _uiState.value = result    // Continues afterwards
     }
 }
 
-// Eine Suspend Funktion:
-suspend fun berechneEtwas(): String {
-    // ... lange Operation ...
-    return "Ergebnis"
+// A suspend function:
+suspend fun computeSomething(): String {
+    // ... long-running operation ...
+    return "Result"
 }
 ```
 
@@ -988,10 +1028,10 @@ Um mit einer REST API zu sprechen, nutzen wir **Retrofit** von Square. Es ist de
 *   **Coroutines Support:** Retrofit unterstützt `suspend` Funktionen nativ!
 
 ```kotlin
-// Der API Vertrag (Interface)
+// The API contract (interface)
 interface RickAndMortyApi {
     @GET("character")
-    suspend fun getAllCharacters(): CharacterResponse
+    suspend fun getCharacters(): CharacterResponse
 }
 ```
 
@@ -1035,16 +1075,16 @@ Wir nutzen `@Serializable`, damit wir keinen Parser von Hand schreiben müssen. 
 Wir müssen Retrofit beibringen, wie es JSON versteht. Dafür nutzen wir den `kotlinx.serialization` Converter.
 
 ```kotlin
-// 1. JSON Konfiguration
-val json = Json { ignoreUnknownKeys = true } // Ignoriere Felder, die wir nicht brauchen
+// 1. JSON configuration
+val json = Json { ignoreUnknownKeys = true } // Ignore unknown fields
 
-// 2. Retrofit bauen
+// 2. Build Retrofit
 val retrofit = Retrofit.Builder()
     .baseUrl("https://rickandmortyapi.com/api/")
     .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
     .build()
 
-// 3. API Service erstellen
+// 3. Create the API service
 val api: RickAndMortyApi = retrofit.create(RickAndMortyApi::class.java)
 ```
 
@@ -1084,8 +1124,8 @@ class CharacterRepository(private val api: RickAndMortyApi) {
     
     // Das ViewModel ruft nur diese Funktion auf
     suspend fun getCharacters(): List<Character> {
-        val response = api.getAllCharacters()
-        // Mapping von DTO (Netzwerk) zu Domain Model (App)
+        val response = api.getCharacters()
+        // Mapping from DTO (network) to domain model (app)
         return response.results.map { it.toDomain() }
     }
 }
@@ -1136,27 +1176,27 @@ graph LR
 Statt vieler Activities nutzen wir *eine* `MainActivity`, die den `NavHost` enthält.
 
 ```kotlin
-// setup in MainActivity
+// Setup in MainActivity
 val navController = rememberNavController()
 
 NavHost(navController = navController, startDestination = "list") {
     
-    // Route 1: Die Liste
+    // Route 1: the list
     composable("list") {
         CharacterListScreen(
             onCharacterClick = { id -> 
-                // Navigation mit Argument
+                // Navigate with an argument
                 navController.navigate("detail/$id") 
             }
         )
     }
     
-    // Route 2: Das Detail
+    // Route 2: the detail
     composable(
-        route = "detail/{id}", // {id} ist ein Platzhalter
+        route = "detail/{id}", // {id} is a placeholder
         arguments = listOf(navArgument("id") { type = NavType.IntType })
     ) { backStackEntry ->
-        // Argument auslesen
+        // Read the argument
         val id = backStackEntry.arguments?.getInt("id") ?: 0
         CharacterDetailScreen(characterId = id)
     }
@@ -1190,7 +1230,7 @@ NavHost(navController = navController, startDestination = ListRoute) {
     }
     
     composable<DetailRoute> { backStackEntry ->
-        // Automatisch typsicher auslesen!
+        // Read it back type-safely!
         val route: DetailRoute = backStackEntry.toRoute()
         CharacterDetailScreen(characterId = route.id)
     }
@@ -1212,35 +1252,41 @@ Da Android Studio standardmäßig **Version Catalogs** nutzt, verwalten wir unse
 
 ```toml
 [versions]
-# ... bestehende Versionen ...
-navCompose = "2.9.7"
-serializationJson = "1.10.0"
+# ... existing versions ...
+navigation = "2.9.7"
+kotlinxSerialization = "1.10.0"
 retrofit = "3.0.0"
 coil = "3.3.0"
-lifecycleRuntimeCompose = "2.10.0"
+# Re-use the existing lifecycle version key (lifecycleRuntimeKtx) for the additional lifecycle libs.
 
 [libraries]
-# ... bestehende Libraries ...
+# ... existing libraries ...
 
-# 1. Navigation & Lifecycle (Jetpack Compose Integration)
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navCompose" }
-androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeCompose" }
+# 1. Navigation & Lifecycle / ViewModel integration
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 
-# 2. Networking (Retrofit) & Serialization
-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serializationJson" }
-retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
-retrofit-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
+# 2. Material icons (extended set, e.g. FavoriteBorder)
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
-# 3. Bilder laden (Coil)
+# 3. Networking (Retrofit) & serialization
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
+
+# 4. Image loading (Coil)
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 [plugins]
-# ... bestehende Plugins ...
-# WICHTIG: Das Serialization Plugin muss hier definiert werden, damit wir es im Gradle Alias nutzen können.
-# Hinweis: Die Version referenziert oft die gleiche wie das Kotlin Plugin selbst ('kotlin').
+# ... existing plugins ...
+# IMPORTANT: define the serialization plugin here so we can reference it via libs.plugins alias.
+# Note: the version usually references the Kotlin plugin itself ('kotlin').
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ```
+
+> **Hinweis:** Welche Einträge Sie tatsächlich brauchen, hängt vom aktuellen Lab ab. Lab 2 braucht nur Coil. Lab 3 zusätzlich `lifecycle-runtime-compose`, `lifecycle-viewmodel-compose` und `material-icons-extended`. Lab 4 zusätzlich Retrofit, Serialization & das Plugin. Lab 5 zusätzlich Navigation Compose. Fügen Sie Schritt für Schritt nur das hinzu, was Sie brauchen.
 
 > **Tipp:** Wenn man Änderungen hier macht, muss das Projekt neu Synchronisiert werden. Dazu klickt man oben rechts auf den Elefanten (**"Sync Now"**), damit Android Studio die Änderungen übernimmt.
 
@@ -1251,35 +1297,39 @@ Jetzt können wir die Libraries im Code nutzen, ohne Versionen zu hardcoden. And
 ```kotlin
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
-    
-    // WICHTIG: Das Serialization Plugin via Alias laden
+    alias(libs.plugins.kotlin.compose)
+
+    // Only needed once we use kotlinx.serialization (Lab 4 onwards)
     alias(libs.plugins.kotlin.serialization)
 }
 
 dependencies {
-    // ... Standard Android X Libs (Core, Activity, Compose BOM) ...
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
+    // ... existing AndroidX libs (Core, Activity, Compose BOM) ...
 
-    // --- UNSERE NEUEN LIBS ---
+    // --- ADD WHAT THE CURRENT LAB NEEDS ---
 
-    // 1. Navigation & Lifecycle
-    implementation(libs.androidx.navigation.compose)
+    // Lab 3+: ViewModel + state collection in Compose
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // 2. Networking & JSON
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.retrofit.core)
-    implementation(libs.retrofit.kotlinx.serialization)
+    // Lab 3+: heart icon (Icons.Default.FavoriteBorder)
+    implementation(libs.androidx.compose.material.icons.extended)
 
-    // 3. Bilder (Coil)
+    // Lab 2+: image loading (Coil)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+
+    // Lab 4+: networking & JSON
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
+
+    // Lab 5+: navigation
+    implementation(libs.androidx.navigation.compose)
 }
 ```
+
+> **Hinweis zu `kotlin-android`:** Ältere Templates listen zusätzlich `alias(libs.plugins.jetbrains.kotlin.android)`. In diesem Workshop ist das **nicht** nötig — `kotlin-compose` aktiviert die Kotlin-Compilation für Android implizit. Ein zusätzlicher `kotlin-android` Alias ohne entsprechenden Eintrag in der `libs.versions.toml` führt zu einem "Unresolved alias"-Fehler.
 
 
 
