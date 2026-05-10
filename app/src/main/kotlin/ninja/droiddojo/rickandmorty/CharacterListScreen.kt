@@ -45,7 +45,7 @@ fun CharacterListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharacterListContent(
+private fun CharacterListContent(
     state: UiState,
     onFavoriteClick: (Int) -> Unit
 ) {

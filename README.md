@@ -18,11 +18,11 @@ Stellen Sie sicher, dass Sie startklar sind:
 ### 2. Die Aufgaben
 
 #### Schritt 1: Die Routen definieren (Type-Safety)
-Damit der Compiler unsere Navigation überprüfen kann, definieren wir unsere Ziele als strikte Kotlin-Typen.
-* Erstellen Sie eine neue Datei `Routes.kt`.
-* Erstellen Sie ein Objekt (`object`) für den Listen-Screen (z.B. `ListRoute`).
-* Erstellen Sie eine Datenklasse (`data class`) für den Detail-Screen (z.B. `DetailRoute`). Diese muss die `id` des Charakters (als `Int`) aufnehmen können.
-* Annotieren Sie beide Typen mit `@Serializable`.
+Damit der Compiler unsere Navigation überprüfen kann, definieren wir unsere Ziele als strikte Kotlin-Typen. Wir legen jede Route **direkt neben dem Screen**, zu dem sie gehört — so bleibt jedes Feature in sich geschlossen.
+* Erstellen Sie eine neue Datei `CharacterListRoute.kt` neben Ihrer `CharacterListScreen.kt`.
+    * Definieren Sie darin ein `@Serializable data object CharacterListRoute`.
+* Erstellen Sie eine neue Datei `CharacterDetailRoute.kt` (sie wird gleich neben dem noch zu bauenden `CharacterDetailScreen.kt` liegen — legen Sie sie schon an).
+    * Definieren Sie darin eine `@Serializable data class CharacterDetailRoute(val id: Int)`.
 > **Tipp:** Sie benötigen das `kotlinx.serialization` Plugin, das wir bereits für das Networking eingerichtet haben.
 > **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 11.3 - Type-Safe Navigation](HANDOUT.md#113-type-safe-navigation-modern-way)
 
@@ -61,10 +61,10 @@ Die `Card` in unserer Liste muss auf Klicks reagieren und diese Information an d
 #### Schritt 6: Den Navigations-Controller aufsetzen (Das Finale)
 Die `MainActivity` orchestriert nun die Screens.
 * Öffnen Sie die `MainActivity.kt` und löschen Sie den direkten Aufruf Ihres `CharacterListScreen`.
-* Erstellen Sie einen `NavController` (`rememberNavController()`) und fügen Sie den `NavHost` ein (Start-Ziel ist `ListRoute`).
-* Definieren Sie im Block des `NavHost` eine `composable<ListRoute>`. Rufen Sie dort den `CharacterListScreen` auf.
-* Nutzen Sie das Lambda `onCharacterClick` des Listen-Screens, um die Navigation auszulösen (`navController.navigate(DetailRoute(id = ...))`).
-* Definieren Sie eine weitere `composable<DetailRoute>`.
+* Erstellen Sie einen `NavController` (`rememberNavController()`) und fügen Sie den `NavHost` ein (Start-Ziel ist `CharacterListRoute`).
+* Definieren Sie im Block des `NavHost` eine `composable<CharacterListRoute>`. Rufen Sie dort den `CharacterListScreen` auf.
+* Nutzen Sie das Lambda `onCharacterClick` des Listen-Screens, um die Navigation auszulösen (`navController.navigate(CharacterDetailRoute(id = ...))`).
+* Definieren Sie eine weitere `composable<CharacterDetailRoute>`.
 * Da Ihr ViewModel die ID selbst ausliest, müssen Sie hier **nichts weiter tun**, als einfach `CharacterDetailScreen()` aufzurufen!
 > **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 11.2 - Implementation](HANDOUT.md#112-implementation-single-activity)
 

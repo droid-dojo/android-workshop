@@ -1,6 +1,7 @@
 package ninja.droiddojo.rickandmorty.data.api
 
 import kotlinx.serialization.Serializable
+import ninja.droiddojo.rickandmorty.Character
 
 @Serializable
 data class CharacterDto(
@@ -10,3 +11,9 @@ data class CharacterDto(
     val image: String
 )
 
+fun CharacterDto.toDomain(): Character = Character(
+    id = id,
+    name = name,
+    status = status,
+    imageUrl = image
+)
