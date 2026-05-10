@@ -11,7 +11,7 @@ Stellen Sie sicher, dass Sie startklar sind:
 
 ---
 
-> **Voraussetzung:** Dieses Lab benötigt **Retrofit**, **kotlinx-serialization** und das dazugehörige Gradle-Plugin, die noch nicht im Projekt enthalten sind. Fügen Sie die Versionen, Libraries und das Plugin in `gradle/libs.versions.toml` hinzu und binden Sie `retrofit-core`, `retrofit-kotlinx-serialization` sowie `kotlinx-serialization-json` in der `app/build.gradle.kts` ein. Vergessen Sie nicht, das Serialization-Plugin im `plugins`-Block zu laden! Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
+> **Voraussetzung:** Dieses Lab benötigt **Retrofit**, **kotlinx-serialization** und das dazugehörige Gradle-Plugin, die noch nicht im Projekt enthalten sind. Fügen Sie die Versionen, Libraries und das Plugin in `gradle/libs.versions.toml` hinzu und binden Sie `retrofit`, `retrofit-converter-kotlinx-serialization` sowie `kotlinx-serialization-json` in der `app/build.gradle.kts` ein. Vergessen Sie nicht, das Serialization-Plugin (`alias(libs.plugins.kotlin.serialization)`) im `plugins`-Block zu laden! Außerdem braucht die App jetzt die `INTERNET`-Permission im `AndroidManifest.xml` (falls noch nicht aus Lab 2 vorhanden). Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
 
 ### 2. Die Aufgaben
 
@@ -40,35 +40,45 @@ Das ViewModel soll sich nicht direkt um HTTP-Requests kümmern. Wir bauen einen 
 * Schreiben Sie eine asynchrone Funktion `getCharacters()`, welche die API aufruft, die `results` Liste nimmt, jedes DTO in unser Domain-Modell (`Character`) umwandelt und diese finale Liste zurückgibt.
 > **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 10 - The Repository Pattern](HANDOUT.md#103-implementierung)
 
-#### Schritt 4: UI State definieren (Sealed Interface)
+#### Schritt 4: Den Service-Locator (`Dependencies`) anlegen
+Unser ViewModel wird gleich ein `CharacterRepository` brauchen — und das Repository wiederum eine `RickAndMortyApi`. Da `viewModel()` aber nur Konstruktoren ohne Argumente aufruft, brauchen wir eine zentrale Stelle, die diese Objekte einmal aufbaut und für uns bereithält.
+Für den Workshop reicht ein simples Kotlin-`object` als Service Locator (vollwertige DI mit Hilt/Koin folgt in der Praxis später).
+* Erstellen Sie eine neue Datei `Dependencies.kt` mit einem `object Dependencies`.
+* Bauen Sie darin **einmalig** die `Json`-Konfiguration, den `Retrofit`-Builder (BaseUrl: `https://rickandmortyapi.com/api/`) und daraus die `RickAndMortyApi` (`retrofit.create<RickAndMortyApi>()` oder `retrofit.create(RickAndMortyApi::class.java)`).
+* Stellen Sie eine `val characterRepository = CharacterRepository(rickAndMortyApi)` als öffentliche Property bereit.
+> **Tipp:** Halten Sie Retrofit-Instanz und API als `private` — exponieren Sie nur das Repository nach außen.
+> **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 9.3 - Setup: Retrofit trifft Serialization](HANDOUT.md#93-setup-retrofit-trifft-serialization)
+
+#### Schritt 5: UI State definieren (Sealed Interface)
 Wenn wir Daten aus dem Netz laden, brauchen wir mehr als nur eine Liste. Wir müssen wissen, ob wir gerade laden oder ob ein Fehler passiert ist.
 * Erstellen Sie in (oder bei) der ViewModel-Datei ein `sealed interface UiState`.
 * Definieren Sie drei Zustände: `Loading` (Object), `Success` (Data Class mit der Liste der Charaktere) und `Error` (Data Class mit einer Fehlermeldung als String).
 > **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 7.2 - Der UI State](HANDOUT.md#72-der-ui-state-warum-eine-eigene-klasse)
 
-#### Schritt 5: Das ViewModel umbauen
+#### Schritt 6: Das ViewModel umbauen
 Jetzt verknüpfen wir die Logik und löschen die Dummy-Daten!
+* Benennen Sie Ihre bisherige Klasse `CharacterViewModel` zu `CharacterListViewModel` um (das ViewModel gehört nun klar zum Listen-Screen — im nächsten Lab kommt ein zweites für den Detail-Screen dazu).
 * Ersetzen Sie den alten `StateFlow` (der nur eine Liste hielt) durch einen, der unseren neuen `UiState` hält. Der Startwert sollte `UiState.Loading` sein.
 * Entfernen Sie die initiale Dummy-Liste.
-* Übergeben Sie das `CharacterRepository` an das ViewModel.
+* Holen Sie sich das Repository **innerhalb des ViewModels** aus dem `Dependencies`-Object: `private val repository = Dependencies.characterRepository`.
 * Schreiben Sie eine Funktion `loadCharacters()`. Starten Sie darin eine Coroutine (`viewModelScope.launch`).
 * Führen Sie den asynchronen Repository-Aufruf aus. Setzen Sie den State bei Erfolg auf `Success` und fangen Sie Fehler mit einem `try-catch`-Block ab.
 > **Tipp:** Setzen Sie im `catch`-Block den State auf `Error` und übergeben Sie die Fehlermeldung der geworfenen Exception.
 * Rufen Sie `loadCharacters()` im `init`-Block des ViewModels auf, damit die Daten beim Start automatisch geladen werden.
 > **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 8.1 - Coroutines](HANDOUT.md#81-coroutines-async-einfach-gemacht)
 
-#### Schritt 6: State Hoisting im Screen
+#### Schritt 7: State Hoisting im Screen
 Damit wir das UI gut testen und anzeigen können, trennen wir den Screen in einen "smarten" und einen "dummen" Teil auf.
-* Benennen Sie Ihre bisherige Composable `CharacterListScreen` um in `CharacterListContent`.
+* Benennen Sie Ihre bisherige Composable `CharacterListScreen` um in `CharacterListContent` und markieren Sie sie als `private` — sie soll nur noch innerhalb der Datei verwendet werden.
 * Passen Sie die Parameter von `CharacterListContent` an: Es darf kein ViewModel mehr kennen! Es soll stattdessen den `state: UiState` und das Event `onFavoriteClick: (Int) -> Unit` entgegennehmen.
 * Nutzen Sie innerhalb von `CharacterListContent` ein `when(state)` Konstrukt:
     * Bei `Loading`: Zeigen Sie einen `CircularProgressIndicator` (zentriert) an.
     * Bei `Error`: Zeigen Sie einen Text mit der Fehlermeldung an.
     * Bei `Success`: Zeigen Sie Ihre `LazyColumn` (Ihre bisherige Liste) mit den geladenen Daten an!
-* Erstellen Sie nun eine **neue** Funktion `CharacterListScreen`, welche das ViewModel instanziiert, den State einsammelt (`collectAsStateWithLifecycle`) und an `CharacterListContent` weitergibt.
+* Erstellen Sie nun eine **neue**, öffentliche Funktion `CharacterListScreen`, welche das ViewModel via `viewModel<CharacterListViewModel>()` instanziiert, den State einsammelt (`collectAsStateWithLifecycle`) und an `CharacterListContent` weitergibt.
 > **Hilfe:** Theorie und Syntax finden Sie in [📘 Modul 6.3 - State Hoisting](HANDOUT.md#63-state-hoisting-teile-und-herrsche) und [📘 Modul 7.5 - UI State konsumieren](HANDOUT.md#75-der-kreis-schlie%C3%9Ft-sich-ui-state-konsumieren)
 
-#### Schritt 7: Previews für alle Zustände
+#### Schritt 8: Previews für alle Zustände
 * Erstellen Sie drei separate `@Preview` Funktionen.
 * Preview 1 (`LoadingPreview`): Rufen Sie `CharacterListContent` auf und übergeben Sie `UiState.Loading`.
 * Preview 2 (`ErrorPreview`): Übergeben Sie `UiState.Error("Keine Internetverbindung")`.
