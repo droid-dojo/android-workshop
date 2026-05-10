@@ -10,6 +10,8 @@ Stellen Sie sicher, dass Sie startklar sind:
 * **Option A (Eigener Code):** Bleiben Sie auf Ihrem aktuellen Branch, wenn Sie die vorherige Aufgabe erfolgreich abgeschlossen haben.
 * **Option B (Sicherheitsnetz):** Wechseln Sie auf den Branch `lab-2-lists`, wenn Sie unsere Musterlösung als Startpunkt nutzen möchten (`git checkout lab-2-lists`).
 
+> **Voraussetzung:** Dieses Lab benötigt die **Coil**-Bibliothek (Schritt 5) und die `INTERNET`-Permission (Schritt 6). Coil ist noch nicht im Projekt enthalten — fügen Sie die Versionen und Libraries in `gradle/libs.versions.toml` hinzu und binden Sie `coil-compose` sowie `coil-network-okhttp` in der `app/build.gradle.kts` ein. Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
+
 ---
 
 ### 2. Die Aufgaben
@@ -31,25 +33,35 @@ Unser `CharacterItem` soll nun echte Daten anzeigen und besser aussehen.
     * Geben Sie der `Row` *innerhalb* der Card ein eigenes Innen-Padding (`16.dp`).
 > Theorie und Syntax finden Sie in [📘 Modul 4.3 - Cards](HANDOUT.md#43-cards-inhalte-gruppieren)
 
-#### Schritt 3: Theming anwenden (Weg mit harten Werten!)
+#### Schritt 3: Eigenes App-Theme anlegen
+Damit Material Design konsistent funktioniert (inkl. Dark Mode), brauchen wir ein zentrales Theme-Composable.
+* Erstellen Sie eine neue Kotlin-Datei `Theme.kt` im gleichen Package.
+* Definieren Sie darin eine Composable-Funktion `RickAndMortyTheme(content: @Composable () -> Unit)`, die intern `MaterialTheme(...)` aufruft und automatisch zwischen `lightColorScheme()` und `darkColorScheme()` umschaltet (siehe Beispiel im Handout).
+> Theorie und Syntax finden Sie in [📘 Modul 4.1 - Theming](HANDOUT.md#41-theming-konsistentes-design--dark-mode)
+
+#### Schritt 4: Theming anwenden (Weg mit harten Werten!)
 Wir wollen konsistente Schriften nutzen, die auch im Dark Mode funktionieren.
 * Passen Sie die `Text`-Elemente in Ihrem `CharacterItem` an.
 * Entfernen Sie die festen Schriftgrößen (wie `20.sp` oder `14.sp`).
 * Weisen Sie dem Namen einen Schriftstil aus dem `MaterialTheme` zu (nutzen Sie z.B. `MaterialTheme.typography.titleLarge`).
 * Weisen Sie dem Status ebenfalls einen passenden Stil zu (z.B. `bodyMedium`).
-> Theorie und Syntax finden Sie in [📘 Modul 4.1 - Theming](HANDOUT.md#41-theming-konsistentes-design--dark-mode)
 
-#### Schritt 4: Echte Bilder laden (Coil)
+#### Schritt 5: Echte Bilder laden (Coil)
 Der blaue Kasten hat ausgedient. Wir wollen das Bild aus der URL laden.
-
-> **Voraussetzung:** Für diesen Schritt benötigen Sie die **Coil**-Bibliothek. Diese ist noch nicht im Projekt enthalten. Fügen Sie die Versionen und Libraries in `gradle/libs.versions.toml` hinzu und binden Sie `coil-compose` sowie `coil-network-okhttp` in der `app/build.gradle.kts` ein. Die genauen Einträge finden Sie im [📘 Anhang A](HANDOUT.md#anhang-a-setup--dependencies-modern-way).
-
 * Ersetzen Sie die `Box` durch die `AsyncImage` Composable aus der Coil-Bibliothek.
 * Übergeben Sie als `model` die `imageUrl` des Charakters.
 * Wenden Sie Modifier an, um die Größe auf `80.dp` zu belassen und das Bild kreisrund zuzuschneiden.
 > Theorie und Syntax finden Sie in [📘 Modul 5 - Bilder laden](HANDOUT.md#modul-5-bilder-laden-images--networking-basics)
 
-#### Schritt 5: Der Listen-Screen (Scaffold & LazyColumn)
+#### Schritt 6: Internet-Permission setzen
+Damit Coil die Bilder tatsächlich vom Server laden darf, muss die App ins Internet dürfen. Ohne diese Zeile bleibt jedes `AsyncImage` stumm leer — kein Fehler, kein Bild.
+* Öffnen Sie `app/src/main/AndroidManifest.xml`.
+* Fügen Sie **über** dem `<application>`-Tag die folgende Zeile ein:
+    ```xml
+    <uses-permission android:name="android.permission.INTERNET" />
+    ```
+
+#### Schritt 7: Der Listen-Screen (Scaffold & LazyColumn)
 Jetzt bauen wir den eigentlichen Bildschirm.
 * Erstellen Sie eine neue Datei `CharacterListScreen.kt` und darin eine `@Composable` Funktion `CharacterListScreen`.
 * Nutzen Sie ein `Scaffold` als Grundgerüst. Fügen Sie der TopBar einen Titel hinzu (z.B. "Rick & Morty Guide").
@@ -57,13 +69,19 @@ Jetzt bauen wir den eigentlichen Bildschirm.
     * Konfigurieren Sie die Liste so, dass zwischen den einzelnen Listenelementen ein Abstand von `16.dp` herrscht.
     * Nutzen Sie die Eigenschaften der Liste, um sicherzustellen, dass das erste und das letzte Element einen Außenabstand nach oben und unten haben.
 * Lassen Sie die `LazyColumn` über Ihre Dummy-Daten iterieren und rufen Sie für jedes Element Ihr aktualisiertes `CharacterItem` auf.
-> Theorie und Syntax finden Sie in [📘 Modul 4.2 - Scaffold](HANDOUT.md#42-die-app-struktur-scaffold) und [📘 Modul 3.1 - LazyColumn](HANDOUT.md#31-lazycolumn-listen-performant-anzeigen)
+> Theorie und Syntax finden Sie in [📘 Modul 4.2 - Scaffold](HANDOUT.md#42-die-app-struktur-scaffold) und [📘 Modul 3.2 - LazyColumn](HANDOUT.md#32-lazycolumn-listen-performant-anzeigen)
 
-#### Schritt 6: Previews reparieren & Theme anwenden
+#### Schritt 8: Previews reparieren & Theme anwenden
 Da Ihr `CharacterItem` nun einen Parameter verlangt, wird Ihre alte `@Preview` einen Fehler werfen.
 * Übergeben Sie in der Preview ein einzelnes Dummy-Objekt an das Item.
 * Erstellen Sie eine zusätzliche `@Preview` für den gesamten `CharacterListScreen`.
-* **Wichtig:** Wickeln Sie den Aufruf in Ihren Previews in Ihr App-Theme ein (z.B. `RickAndMortyTheme { ... }`), damit die neuen Typografie-Stile korrekt dargestellt werden!
+* **Wichtig:** Wickeln Sie den Aufruf in Ihren Previews in Ihr App-Theme ein (`RickAndMortyTheme { ... }`), damit die neuen Typografie-Stile korrekt dargestellt werden.
+
+#### Schritt 9: App auf dem Gerät anzeigen (optional, aber empfohlen)
+Damit Sie Ihre Liste nicht nur in der Preview sehen, rufen Sie sie aus der `MainActivity` auf.
+* Öffnen Sie `MainActivity.kt`.
+* Setzen Sie im `setContent { ... }` Block: `RickAndMortyTheme { CharacterListScreen() }`.
+* Starten Sie die App auf einem Emulator oder Gerät.
 
 ---
 

@@ -50,6 +50,6 @@ fun CharacterItem(modifier: Modifier = Modifier) {
 
 @Preview
 @Composable
-private fun Preview() {
+private fun CharacterItemPreview() {
     CharacterItem()
 }
