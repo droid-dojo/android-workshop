@@ -1157,10 +1157,12 @@ fun loadCharacters() {
 
 Wir haben jetzt viele einzelne "Screens" (Composables). Aber wie kommen wir von A nach B?
 
+> **Hinweis:** Wir verwenden in diesem Workshop **Jetpack Navigation 3** (das aktuelle Navigationsmodell für Compose, Stand 2026). In älteren Codebasen begegnet euch noch die Vorgängerbibliothek "Navigation 2" — eine kompakte Übersicht findet ihr in **Anhang B**.
+
 **Die Komponenten:**
-1.  **Screen:** Ein Composable, das den ganzen Bildschirm füllt (z.B. `CharacterListScreen`, `CharacterDetailScreen`).
-2.  **NavController:** Der "Chef". Er weiß, wo wir sind, und kann zu neuen Zielen navigieren (`navigate("detail")`) oder zurückgehen (`popBackStack()`).
-3.  **NavHost:** Der "Container". Hier wird der NavController mit dem Graphen verbunden. Er tauscht die Screens aus.
+1.  **NavKey:** Ein Interface, das jede unserer Routen implementiert. Eine Route ist eine `@Serializable`-Datenklasse (oder ein `data object`), die als Schlüssel auf dem Back-Stack landet.
+2.  **Back-Stack:** Eine Liste vom Typ `SnapshotStateList<NavKey>`. Vorwärts navigieren = `add(route)`, zurück = `removeLastOrNull()`. Keine Magie, kein `NavController` dazwischen.
+3.  **NavDisplay:** Der "Container". Er beobachtet den Back-Stack und tauscht die Screens aus.
 
 **Der Navigations-Graph:**
 
@@ -1173,71 +1175,113 @@ graph LR
 
 ### 11.2 Implementation: Single Activity
 
-Statt vieler Activities nutzen wir *eine* `MainActivity`, die den `NavHost` enthält.
+Statt vieler Activities nutzen wir *eine* `MainActivity`, die das `NavDisplay` enthält.
 
 ```kotlin
-// Setup in MainActivity
-val navController = rememberNavController()
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            RickAndMortyTheme {
+                val backStack = rememberNavBackStack(CharacterListRoute)
 
-NavHost(navController = navController, startDestination = "list") {
-    
-    // Route 1: the list
-    composable("list") {
-        CharacterListScreen(
-            onCharacterClick = { id -> 
-                // Navigate with an argument
-                navController.navigate("detail/$id") 
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = { backStack.removeLastOrNull() },
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                    ),
+                    entryProvider = entryProvider {
+                        entry<CharacterListRoute> {
+                            CharacterListScreen(
+                                onCharacterClick = { id ->
+                                    backStack.add(CharacterDetailRoute(id))
+                                }
+                            )
+                        }
+                        entry<CharacterDetailRoute> { key ->
+                            CharacterDetailScreen(
+                                viewModel = viewModel(
+                                    factory = CharacterDetailViewModel.Factory(key.id)
+                                ),
+                                onNavigateBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+                    }
+                )
             }
-        )
-    }
-    
-    // Route 2: the detail
-    composable(
-        route = "detail/{id}", // {id} is a placeholder
-        arguments = listOf(navArgument("id") { type = NavType.IntType })
-    ) { backStackEntry ->
-        // Read the argument
-        val id = backStackEntry.arguments?.getInt("id") ?: 0
-        CharacterDetailScreen(characterId = id)
+        }
     }
 }
 ```
 
-### 11.3 Type-Safe Navigation (Modern Way)
+**Was die Decorators tun:**
+- `rememberSaveableStateHolderNavEntryDecorator()` — sorgt dafür, dass `rememberSaveable`-State pro Entry erhalten bleibt (z.B. Scroll-Position der Liste).
+- `rememberViewModelStoreNavEntryDecorator()` — gibt jedem Entry seinen eigenen `ViewModelStore`. Pro Navigations-Key gibt es **eine** ViewModel-Instanz, die korrekt aufgeräumt wird, wenn der Entry vom Stack verschwindet.
 
-Bisher haben wir "String-basierte" Navigation genutzt (`navigate("detail/1")`). Das ist fehleranfällig (Tippfehler!). Ab Navigation 2.8.0 unterstützt Android **Type-Safety** via `kotlinx.serialization`.
+### 11.3 Type-Safe Routes mit NavKey
 
-**Der Vorteil:** Der Compiler prüft unsere Routen. Keine magischen Strings mehr.
+In Navigation 3 sind Routen **strikte Kotlin-Typen**. Jede Route ist ein `@Serializable` Objekt/Klasse und implementiert das `NavKey`-Interface.
 
-**1. Routen definieren (als Objekte/Klassen):**
+**Der Vorteil:** Keine magischen Strings. Keine `Bundle`-Fischerei. Der Compiler prüft jeden Aufruf — vergisst man ein Argument oder vertippt sich beim Typ, gibt's einen Fehler bei der Compilierung statt einen Crash zur Laufzeit.
+
 ```kotlin
-@Serializable
-object ListRoute
+import androidx.navigation3.runtime.NavKey
+import kotlinx.serialization.Serializable
 
 @Serializable
-data class DetailRoute(val id: Int)
+data object CharacterListRoute : NavKey
+
+@Serializable
+data class CharacterDetailRoute(val id: Int) : NavKey
 ```
 
-**2. Im NavHost nutzen:**
+Routen leben **direkt neben dem Screen**, zu dem sie gehören — so bleibt jedes Feature in sich geschlossen.
+
+Navigieren = einfach den Back-Stack mutieren:
+
 ```kotlin
-NavHost(navController = navController, startDestination = ListRoute) {
-    composable<ListRoute> {
-        CharacterListScreen(
-            onCharacterClick = { id -> 
-                navController.navigate(DetailRoute(id = id)) 
-            }
-        )
-    }
-    
-    composable<DetailRoute> { backStackEntry ->
-        // Read it back type-safely!
-        val route: DetailRoute = backStackEntry.toRoute()
-        CharacterDetailScreen(characterId = route.id)
+backStack.add(CharacterDetailRoute(id = 42))   // vorwärts
+backStack.removeLastOrNull()                    // zurück
+```
+
+> **Wichtig:** Voraussetzung ist die `kotlinx-serialization` Dependency, die wir bereits für Retrofit nutzen! `NavKey` selbst kommt aus `androidx.navigation3.runtime`.
+
+### 11.4 ViewModels mit Navigations-Argumenten
+
+Wie kommt die `id` aus `CharacterDetailRoute(42)` ins `CharacterDetailViewModel`? Antwort: über eine `ViewModelProvider.Factory`, die direkt im ViewModel als geschachtelte Klasse lebt.
+
+```kotlin
+class CharacterDetailViewModel(
+    private val id: Int,
+) : ViewModel() {
+
+    // ... repository, _uiState, init { loadCharacter(id) } ...
+
+    class Factory(private val id: Int) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            CharacterDetailViewModel(id) as T
     }
 }
 ```
 
-> **Wichtig:** Voraussetzung ist die `kotlinx-serialization` Dependency, die wir bereits für Retrofit nutzen!
+Im `entry<CharacterDetailRoute>` baust du das ViewModel mit dem Key auf:
+
+```kotlin
+entry<CharacterDetailRoute> { key ->
+    CharacterDetailScreen(
+        viewModel = viewModel(factory = CharacterDetailViewModel.Factory(key.id)),
+        onNavigateBack = { backStack.removeLastOrNull() },
+    )
+}
+```
+
+Dank `rememberViewModelStoreNavEntryDecorator()` (siehe 11.2) bekommt jeder unique `CharacterDetailRoute`-Key seine **eigene** ViewModel-Instanz. Navigierst du also `Detail(1) → zurück → Detail(2)`, lädt VM #1 nicht versehentlich noch einmal.
+
+> **Tipp:** Wer aus alten Codebasen `SavedStateHandle.toRoute<T>()` kennt — das ist die Navigation-2-Variante (siehe Anhang B). In Nav 3 passiert das Argument-Passing explizit über die Factory, ganz ohne `SavedStateHandle`.
 
 ---
 
@@ -1253,17 +1297,19 @@ Da Android Studio standardmäßig **Version Catalogs** nutzt, verwalten wir unse
 ```toml
 [versions]
 # ... existing versions ...
-navigation = "2.9.7"
-kotlinxSerialization = "1.10.0"
+navigation3 = "1.1.2"
+kotlinxSerialization = "1.11.0"
 retrofit = "3.0.0"
-coil = "3.3.0"
+coil = "3.4.0"
 # Re-use the existing lifecycle version key (lifecycleRuntimeKtx) for the additional lifecycle libs.
 
 [libraries]
 # ... existing libraries ...
 
-# 1. Navigation & Lifecycle / ViewModel integration
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+# 1. Navigation 3 & Lifecycle / ViewModel integration
+androidx-navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
+androidx-lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 
@@ -1286,7 +1332,7 @@ coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp"
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ```
 
-> **Hinweis:** Welche Einträge Sie tatsächlich brauchen, hängt vom aktuellen Lab ab. Lab 2 braucht nur Coil. Lab 3 zusätzlich `lifecycle-runtime-compose`, `lifecycle-viewmodel-compose` und `material-icons-extended`. Lab 4 zusätzlich Retrofit, Serialization & das Plugin. Lab 5 zusätzlich Navigation Compose. Fügen Sie Schritt für Schritt nur das hinzu, was Sie brauchen.
+> **Hinweis:** Welche Einträge Sie tatsächlich brauchen, hängt vom aktuellen Lab ab. Lab 2 braucht nur Coil. Lab 3 zusätzlich `lifecycle-runtime-compose`, `lifecycle-viewmodel-compose` und `material-icons-extended`. Lab 4 zusätzlich Retrofit, Serialization & das Plugin. Lab 5 zusätzlich Navigation 3 (`navigation3-runtime`, `navigation3-ui`, `lifecycle-viewmodel-navigation3`). Fügen Sie Schritt für Schritt nur das hinzu, was Sie brauchen.
 
 > **Tipp:** Wenn man Änderungen hier macht, muss das Projekt neu Synchronisiert werden. Dazu klickt man oben rechts auf den Elefanten (**"Sync Now"**), damit Android Studio die Änderungen übernimmt.
 
@@ -1324,12 +1370,92 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
 
-    // Lab 5+: navigation
-    implementation(libs.androidx.navigation.compose)
+    // Lab 5+: navigation 3
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 }
 ```
 
 > **Hinweis zu `kotlin-android`:** Ältere Templates listen zusätzlich `alias(libs.plugins.jetbrains.kotlin.android)`. In diesem Workshop ist das **nicht** nötig — `kotlin-compose` aktiviert die Kotlin-Compilation für Android implizit. Ein zusätzlicher `kotlin-android` Alias ohne entsprechenden Eintrag in der `libs.versions.toml` führt zu einem "Unresolved alias"-Fehler.
+
+---
+
+## Anhang B: Navigation 2 (Legacy / Referenz)
+
+Dieses Kapitel beschreibt die Vorgänger-Navigationsbibliothek `androidx.navigation:navigation-compose`. **Wir verwenden sie in diesem Workshop nicht** — sie ist hier nur dokumentiert, damit ihr sie in bestehenden Codebasen wiedererkennt und versteht. Für neue Projekte: immer Nav 3 (siehe Modul 11).
+
+### B.1 Die Komponenten (Nav 2)
+
+1.  **NavController:** Der "Chef". Er weiß, wo wir sind, und kann zu neuen Zielen navigieren (`navigate("detail")`) oder zurückgehen (`popBackStack()`).
+2.  **NavHost:** Der "Container". Hier wird der NavController mit dem Graphen verbunden. Er tauscht die Screens aus.
+
+### B.2 String-basierte Navigation (älteste Variante)
+
+```kotlin
+val navController = rememberNavController()
+
+NavHost(navController = navController, startDestination = "list") {
+    composable("list") {
+        CharacterListScreen(
+            onCharacterClick = { id ->
+                navController.navigate("detail/$id")
+            }
+        )
+    }
+    composable(
+        route = "detail/{id}",
+        arguments = listOf(navArgument("id") { type = NavType.IntType })
+    ) { backStackEntry ->
+        val id = backStackEntry.arguments?.getInt("id") ?: 0
+        CharacterDetailScreen(characterId = id)
+    }
+}
+```
+
+Problem: magische Strings, keine Compile-Time-Sicherheit. Vertippt man sich in der Route oder vergisst ein Argument, merkt man's erst beim Klicken.
+
+### B.3 Type-Safe Navigation (Nav 2, ab 2.8.0)
+
+```kotlin
+@Serializable
+object ListRoute
+
+@Serializable
+data class DetailRoute(val id: Int)
+
+NavHost(navController = navController, startDestination = ListRoute) {
+    composable<ListRoute> {
+        CharacterListScreen(
+            onCharacterClick = { id ->
+                navController.navigate(DetailRoute(id = id))
+            }
+        )
+    }
+    composable<DetailRoute> { backStackEntry ->
+        val route: DetailRoute = backStackEntry.toRoute()
+        CharacterDetailScreen(characterId = route.id)
+    }
+}
+```
+
+Im ViewModel wurde die Route per `SavedStateHandle` extrahiert:
+
+```kotlin
+class CharacterDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
+    init {
+        val args = savedStateHandle.toRoute<DetailRoute>()
+        loadCharacter(args.id)
+    }
+}
+```
+
+### B.4 Warum wir auf Nav 3 umgestiegen sind
+
+- Kein `NavController` als Indirektion mehr — der Back-Stack ist eine ganz normale Compose-State-Liste, die man direkt mutiert.
+- `SavedStateHandle.toRoute()` entfällt — Argumente fließen explizit über eine ViewModel-`Factory` (siehe Modul 11.4).
+- `NavDisplay` mit `entryProvider` und `entryDecorators` passt zum Compose-Modell: Decorators sind komponierbar, man kann pro Bedarf z.B. einen `ViewModelStore` oder einen `SaveableStateHolder` dazustecken.
+- Nav 3 ist die offizielle Empfehlung von Google (Stand 2026).
 
 
 
