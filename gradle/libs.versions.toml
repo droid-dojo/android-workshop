@@ -1,13 +1,13 @@
 [versions]
-agp = "9.0.1"
-coreKtx = "1.17.0"
+agp = "9.2.0"
+coreKtx = "1.18.0"
 lifecycleRuntimeKtx = "2.10.0"
-activityCompose = "1.12.4"
-kotlin = "2.3.10"
-composeBom = "2026.02.00"
+activityCompose = "1.13.0"
+kotlin = "2.3.21"
+composeBom = "2026.05.01"
 navigation = "2.9.7"
-coil = "3.3.0"
-kotlinxSerialization = "1.10.0"
+coil = "3.4.0"
+kotlinxSerialization = "1.11.0"
 retrofit = "3.0.0"
 
 [libraries]
