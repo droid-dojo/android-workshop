@@ -14,7 +14,7 @@ Sie haben in den letzten Tagen nicht nur Code abgetippt, sondern eine App nach d
 * **Moderne Architektur (MVVM):** Saubere Trennung von UI (`Screen`), Logik (`ViewModel`) und Datenbeschaffung (`Repository`).
 * **State Management:** Reaktive UIs durch `StateFlow` und striktes State Hoisting. Ein UI, das sich selbst heilt und Rotationen überlebt.
 * **Networking & Coroutines:** Asynchrones, blockierungsfreies Laden von JSON-Daten mit *Retrofit*, *Kotlinx Serialization* und *Coil*.
-* **Type-Safe Navigation:** Typsichere Übergabe von Argumenten zwischen Screens, bei der sich das ViewModel die Daten selbstständig über das `SavedStateHandle` zieht.
+* **Type-Safe Navigation (Nav 3):** Typsichere Routen über `NavKey`, ein direkt manipulierbarer Back-Stack via `NavDisplay`, und Navigations-Argumente, die explizit über eine `ViewModelProvider.Factory` ans ViewModel fließen.
 
 ---
 
