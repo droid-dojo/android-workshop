@@ -30,7 +30,6 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.datasource.CollectionPreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import ninja.droiddojo.rickandmorty.PreviewContainer
 import ninja.droiddojo.rickandmorty.R
@@ -38,8 +37,8 @@ import ninja.droiddojo.rickandmorty.character.CharacterSampleData
 
 @Composable
 fun CharacterDetailScreen(
-    viewModel: CharacterDetailViewModel = viewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: CharacterDetailViewModel,
+    onNavigateBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 

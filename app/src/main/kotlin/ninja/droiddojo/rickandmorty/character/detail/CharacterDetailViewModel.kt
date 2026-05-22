@@ -1,12 +1,8 @@
 package ninja.droiddojo.rickandmorty.character.detail
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.navigation.toRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +11,7 @@ import ninja.droiddojo.rickandmorty.Dependencies
 import ninja.droiddojo.rickandmorty.character.data.CharacterRepository
 
 class CharacterDetailViewModel(
-    savedStateHandle: SavedStateHandle
+    private val id: Int,
 ) : ViewModel() {
 
     private val repository: CharacterRepository = Dependencies.characterRepository
@@ -23,8 +19,7 @@ class CharacterDetailViewModel(
     val uiState: StateFlow<CharacterDetailUiState> = _uiState.asStateFlow()
 
     init {
-        val arguments = savedStateHandle.toRoute<CharacterDetailRoute>()
-        loadCharacter(arguments.id)
+        loadCharacter(id)
     }
 
     private fun loadCharacter(id: Int) {
@@ -36,5 +31,11 @@ class CharacterDetailViewModel(
                 _uiState.value = CharacterDetailUiState.Error(e.message ?: "An unknown error occurred")
             }
         }
+    }
+
+    class Factory(private val id: Int) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            CharacterDetailViewModel(id) as T
     }
 }
