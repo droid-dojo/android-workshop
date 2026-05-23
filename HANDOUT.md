@@ -1193,6 +1193,12 @@ class MainActivity : ComponentActivity() {
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
                     ),
+                    transitionSpec = {
+                        slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
+                    },
+                    popTransitionSpec = {
+                        slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
+                    },
                     entryProvider = entryProvider {
                         entry<CharacterListRoute> {
                             CharacterListScreen(
@@ -1220,6 +1226,8 @@ class MainActivity : ComponentActivity() {
 **Was die Decorators tun:**
 - `rememberSaveableStateHolderNavEntryDecorator()` — sorgt dafür, dass `rememberSaveable`-State pro Entry erhalten bleibt (z.B. Scroll-Position der Liste).
 - `rememberViewModelStoreNavEntryDecorator()` — gibt jedem Entry seinen eigenen `ViewModelStore`. Pro Navigations-Key gibt es **eine** ViewModel-Instanz, die korrekt aufgeräumt wird, wenn der Entry vom Stack verschwindet.
+
+**Was die Transitions tun:** Ohne `transitionSpec` / `popTransitionSpec` schaltet `NavDisplay` instant zwischen Screens — die System-Geste "Predictive Back" animiert dann, aber Vorwärts-Navigation und der Top-Bar-Pfeil zurück sind hart geschnitten. Mit den beiden Slide-Specs bekommen wir konsistentes Verhalten: vorwärts kommt neuer Content von rechts rein, zurück geht's nach rechts wieder raus.
 
 ### 11.3 Type-Safe Routes mit NavKey
 
