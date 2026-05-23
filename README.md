@@ -67,6 +67,8 @@ Die `MainActivity` orchestriert nun die Screens — diesmal mit `NavDisplay` sta
     * `backStack = backStack`
     * `onBack = { backStack.removeLastOrNull() }`
     * `entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator())`
+    * `transitionSpec = { slideInHorizontally { it } togetherWith slideOutHorizontally { -it } }` (vorwärts: neuer Content rutscht von rechts rein)
+    * `popTransitionSpec = { slideInHorizontally { -it } togetherWith slideOutHorizontally { it } }` (zurück: alter Content rutscht nach rechts raus)
     * `entryProvider = entryProvider { ... }`
 * Im `entryProvider` definieren Sie zwei Einträge:
     * `entry<CharacterListRoute> { CharacterListScreen(onCharacterClick = { id -> backStack.add(CharacterDetailRoute(id)) }) }`
